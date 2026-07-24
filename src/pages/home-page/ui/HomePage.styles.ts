@@ -3,16 +3,14 @@ import { StyleSheet } from "react-native";
 import { colors, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    justifyContent: "space-between",
-    paddingVertical: spacing.xxl,
+  header: {
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
-  intro: {
-    flex: 1,
+  titleRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
+    justifyContent: "space-between",
   },
   badge: {
     borderRadius: radius.full,
@@ -23,5 +21,16 @@ export const styles = StyleSheet.create({
   badgeLabel: {
     color: colors.primary,
     letterSpacing: 2,
+  },
+  list: {
+    flex: 1,
+  },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  error: {
+    color: "#B42318",
   },
 });
