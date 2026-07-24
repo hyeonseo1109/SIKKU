@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { Alert, TextInput, View } from "react-native";
 
@@ -7,6 +7,8 @@ import { createClockProject } from "@/features/create-clock-project";
 import { AppButton, AppScreen, AppText } from "@/shared/ui";
 
 import { styles } from "./CreateProjectPage.styles";
+
+const DEFAULT_PROJECT_NAME = "나의 시계";
 
 const clockTypes: { label: string; value: ClockType }[] = [
   { label: "아날로그", value: "analog" },
@@ -21,15 +23,25 @@ const presets: { label: string; value: CanvasPreset }[] = [
 
 export const CreateProjectPage = () => {
   const router = useRouter();
-  const [name, setName] = useState("나의 시계");
+  const nameRef = useRef(DEFAULT_PROJECT_NAME);
   const [type, setType] = useState<ClockType>("analog");
   const [preset, setPreset] = useState<CanvasPreset>("square");
   const [creating, setCreating] = useState(false);
 
   const handleCreate = async () => {
+    const name = nameRef.current.trim();
+    if (!name) {
+      Alert.alert("이름을 입력해 주세요", "시계 이름은 비워둘 수 없어요.");
+      return;
+    }
+
     setCreating(true);
     try {
-      const project = await createClockProject({ name, preset, type });
+      const project = await createClockProject({
+        name,
+        preset,
+        type,
+      });
       router.replace({
         pathname: "/editor/[projectId]",
         params: { projectId: project.id },
@@ -59,11 +71,12 @@ export const CreateProjectPage = () => {
         <AppText variant="label">프로젝트 이름</AppText>
         <TextInput
           accessibilityLabel="프로젝트 이름"
-          maxLength={40}
-          onChangeText={setName}
+          defaultValue={DEFAULT_PROJECT_NAME}
+          onChangeText={(text) => {
+            nameRef.current = text;
+          }}
           placeholder="나의 시계"
           style={styles.input}
-          value={name}
         />
       </View>
 
@@ -101,7 +114,7 @@ export const CreateProjectPage = () => {
 
       <View style={styles.submit}>
         <AppButton
-          disabled={creating || !name.trim()}
+          disabled={creating}
           label={creating ? "만드는 중…" : "편집 시작"}
           onPress={() => void handleCreate()}
         />

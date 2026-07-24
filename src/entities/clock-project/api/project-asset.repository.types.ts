@@ -1,5 +1,6 @@
 import type {
   ImageAsset,
+  ImageSelectionMode,
   NormalizedPoint,
   ProjectAssetCategory,
 } from "@/entities/image-asset";
@@ -20,7 +21,8 @@ export type ProjectAssetRepository = {
     projectId: string,
     asset: ImageAsset,
     pngBytes: Uint8Array,
-    lassoPoints: NormalizedPoint[],
+    lassoRegions: NormalizedPoint[][],
+    selectionMode?: ImageSelectionMode,
   ) => Promise<ImageAsset>;
   removeAsset: (projectId: string, asset: ImageAsset) => Promise<void>;
   removeAllProjectAssets: (projectId: string) => Promise<void>;

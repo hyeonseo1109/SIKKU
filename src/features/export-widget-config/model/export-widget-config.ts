@@ -19,6 +19,8 @@ export type WidgetLayerConfig = {
   scaleY: number;
   anchorX: number;
   anchorY: number;
+  tipX?: number;
+  tipY?: number;
 };
 
 export type NativeWidgetConfig = {
@@ -45,22 +47,14 @@ const assertReadable = (uri: string, label: string) => {
   }
 };
 
-export const exportWidgetConfig = (
-  project: ClockProject,
-): NativeWidgetConfig => {
-  if (
-    project.type === "analog" &&
-    (!project.analogConfig?.hourHandLayerId ||
-      !project.analogConfig.minuteHandLayerId)
-  ) {
-    throw new Error("시침과 분침 이미지를 모두 등록해 주세요.");
-  }
-
+const validateCanvasFiles = (project: ClockProject) => {
   if (project.canvas.backgroundImageUri) {
     assertReadable(project.canvas.backgroundImageUri, "배경");
   }
+};
 
-  const layers = project.layers
+const exportLayers = (project: ClockProject): WidgetLayerConfig[] =>
+  project.layers
     .filter((layer) => layer.visible)
     .sort((a, b) => a.zIndex - b.zIndex)
     .map((layer) => {
@@ -75,17 +69,28 @@ export const exportWidgetConfig = (
       };
     });
 
+const exportDigitImagePaths = (
+  project: ClockProject,
+): Partial<Record<DigitValue, string>> => {
   const digitImagePaths: Partial<Record<DigitValue, string>> = {};
-  if (project.digitalConfig) {
-    for (const [digit, uri] of Object.entries(
-      project.digitalConfig.digitImageMap,
-    )) {
-      if (uri) {
-        assertReadable(uri, `숫자 ${digit}`);
-        digitImagePaths[digit as DigitValue] = uri;
-      }
+  if (!project.digitalConfig) return digitImagePaths;
+  for (const [digit, uri] of Object.entries(
+    project.digitalConfig.digitImageMap,
+  )) {
+    if (uri) {
+      assertReadable(uri, `숫자 ${digit}`);
+      digitImagePaths[digit as DigitValue] = uri;
     }
   }
+  return digitImagePaths;
+};
+
+export const exportWidgetConfig = (
+  project: ClockProject,
+): NativeWidgetConfig => {
+  validateCanvasFiles(project);
+  const layers = exportLayers(project);
+  const digitImagePaths = exportDigitImagePaths(project);
 
   return {
     schemaVersion: project.schemaVersion,

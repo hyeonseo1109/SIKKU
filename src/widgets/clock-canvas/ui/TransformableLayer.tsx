@@ -10,7 +10,11 @@ import Animated, {
 import { runOnJS } from "react-native-worklets";
 
 import type { ClockLayer, ClockLayerTransform } from "@/entities/clock-layer";
-import { clampLayerToCanvas, normalizeRotation } from "@/shared/lib/geometry";
+import {
+  clampLayerToCanvas,
+  getHandOrientationOffset,
+  normalizeRotation,
+} from "@/shared/lib/geometry";
 
 import { styles } from "./ClockCanvas.styles";
 
@@ -42,6 +46,9 @@ const TransformableLayerComponent = ({
   const screenWidth = layer.transform.width * scale;
   const screenHeight = layer.transform.height * scale;
   const isHand = layer.type === "hour-hand" || layer.type === "minute-hand";
+  const orientationOffset = isHand
+    ? getHandOrientationOffset(layer.transform)
+    : 0;
 
   useEffect(() => {
     translateX.value = 0;
@@ -174,6 +181,7 @@ const TransformableLayerComponent = ({
         rotate: `${
           layer.transform.rotation +
           timeRotation +
+          orientationOffset +
           (gestureRotation.value * 180) / Math.PI
         }deg`,
       },
@@ -199,6 +207,7 @@ const TransformableLayerComponent = ({
             height: screenHeight,
             opacity: layer.opacity,
             zIndex: layer.zIndex + 2,
+            elevation: layer.zIndex + 2,
             transformOrigin: isHand
               ? [
                   layer.transform.anchorX * screenWidth,

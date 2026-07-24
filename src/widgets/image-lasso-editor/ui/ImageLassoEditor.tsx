@@ -3,10 +3,12 @@ import {
   Canvas,
   Group,
   Image as SkiaImage,
+  PathOp,
   Path,
   Rect,
   Skia,
   useImage,
+  type SkPath,
 } from "@shopify/react-native-skia";
 import type { LayoutChangeEvent } from "react-native";
 import { View } from "react-native";
@@ -56,17 +58,29 @@ const isInside = (point: Point, rect: ImageRect) =>
   point.y >= rect.y &&
   point.y <= rect.y + rect.height;
 
-const createScreenPath = (points: NormalizedPoint[], imageRect: ImageRect) => {
-  if (points.length === 0) {
+const createScreenPath = (
+  regions: NormalizedPoint[][],
+  imageRect: ImageRect,
+) => {
+  if (regions.every((points) => points.length === 0)) {
     return null;
   }
 
-  const path = Skia.Path.Make();
-  const first = normalizedImagePointToScreenPoint(points[0]!, imageRect);
-  path.moveTo(first.x, first.y);
-  points.slice(1).forEach((point) => {
-    const screenPoint = normalizedImagePointToScreenPoint(point, imageRect);
-    path.lineTo(screenPoint.x, screenPoint.y);
+  let path: SkPath | null = null;
+  regions.forEach((points) => {
+    const firstPoint = points[0];
+    if (!firstPoint) return;
+    const regionPath = Skia.Path.Make();
+    const first = normalizedImagePointToScreenPoint(firstPoint, imageRect);
+    regionPath.moveTo(first.x, first.y);
+    points.slice(1).forEach((point) => {
+      const screenPoint = normalizedImagePointToScreenPoint(point, imageRect);
+      regionPath.lineTo(screenPoint.x, screenPoint.y);
+    });
+    if (points.length > 2) regionPath.close();
+    path = path
+      ? (Skia.Path.MakeFromOp(path, regionPath, PathOp.Union) ?? path)
+      : regionPath;
   });
   return path;
 };
@@ -77,18 +91,29 @@ export const ImageLassoEditor = ({
   size,
 }: ImageLassoEditorProps) => {
   const image = useImage(asset.originalUri);
-  const points = useImageLassoStore((state) => state.points);
+  const regions = useImageLassoStore((state) => state.regions);
+  const activePoints = useImageLassoStore((state) => state.activePoints);
   const beginPath = useImageLassoStore((state) => state.beginPath);
   const appendPoint = useImageLassoStore((state) => state.appendPoint);
   const finishPath = useImageLassoStore((state) => state.finishPath);
   const imageRect = useMemo(
     () =>
-      getContainRect(Math.max(asset.width, 1), Math.max(asset.height, 1), size),
-    [asset.height, asset.width, size],
+      getContainRect(
+        Math.max(asset.originalWidth ?? asset.width, 1),
+        Math.max(asset.originalHeight ?? asset.height, 1),
+        size,
+      ),
+    [
+      asset.height,
+      asset.originalHeight,
+      asset.originalWidth,
+      asset.width,
+      size,
+    ],
   );
   const path = useMemo(
-    () => createScreenPath(points, imageRect),
-    [imageRect, points],
+    () => createScreenPath([...regions, activePoints], imageRect),
+    [activePoints, imageRect, regions],
   );
 
   const toNormalizedPoint = useCallback(

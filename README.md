@@ -65,7 +65,7 @@ src/
     ├── storage/            # AsyncStorage 어댑터
     └── ui/                 # 최소 공통 UI
 modules/
-└── clock-widget/           # 향후 로컬 Expo Module 경계
+└── clock-widget/           # Android AppWidget 로컬 Expo Module
 ```
 
 FSD 의존성은 `app → pages → widgets → features → entities → shared`
@@ -103,32 +103,29 @@ Pressable/SafeAreaView로 교체했습니다.
 
 ## Expo Go와 Development Build
 
-현재 사용 중인 Skia 2.6.2는 Expo SDK 57의 Expo Go에 포함되어 있어
-프로젝트 관리, 편집 제스처와 올가미 PNG 생성을 Expo Go에서 확인할 수
-있습니다. 실제 Kotlin Expo Module과 `AppWidgetProvider`가 추가되면
-Expo Go 바이너리에 해당 네이티브 코드가 없으므로 Development Build가
-필요합니다.
-
-네이티브 작업을 시작할 때만 다음을 실행합니다.
+편집기 대부분은 Expo Go에서 확인할 수 있지만, 홈 화면 위젯은 앱에
+포함된 Kotlin 코드와 `AppWidgetProvider`를 사용하므로 Android
+Development Build가 필요합니다.
 
 ```bash
-npx expo prebuild
-npx expo run:android
+npx expo prebuild --platform android
+npm run android
 ```
 
-현재는 managed 상태를 유지하며 `android/`, `ios/` 폴더를 생성하지
-않습니다. Android package와 iOS bundle identifier도 사용자
-namespace가 정해질 때 `app.json`에 추가해야 합니다.
+`android/`는 CNG로 생성되는 산출물이라 Git에 저장하지 않습니다.
+네이티브 원본은 `app.json`과 `modules/clock-widget`에 있습니다.
+Expo Go에서는 위젯 영역이 Development Build가 필요하다는 안내를
+표시하며 성공한 것처럼 동작하지 않습니다.
 
 ## 구현된 사용자 흐름
 
 - 프로젝트 이름, 아날로그/디지털 유형, 정사각형·가로형·세로형 생성
 - 프로젝트 목록, 재진입, 독립 파일 복제, 확인 후 삭제
 - 배경색·배경 이미지·장식 이미지 추가
-- 이미지 전체 사용 또는 자유곡선 올가미 선택
-- Skia offscreen surface에서 선택 외부 alpha를 제거한 실제 PNG 생성
+- 이미지 전체 사용 또는 여러 번 더해 그리는 자유곡선 올가미 선택
+- 올가미 경계로 실제 캔버스를 잘라낸 PNG와 선택 후 자동 배경 제거
 - pan/pinch/rotation 동시 제스처, 레이어 잠금·숨김·삭제·순서 변경
-- 시침·분침의 정규화 anchor 드래그와 현재/지정 시간 미리보기
+- 시침·분침의 중심축·방향 꼭짓점 드래그, 중심 고정 비율 크기 조절
 - 숫자 0–9 및 콜론 이미지, fallback 문자, 12/24시간, 간격과 표시 변형
 - 최대 30단계 undo/redo, 750ms 자동 저장, 명시적 저장
 - 숨김 레이어를 제외하고 파일을 검증하는 Kotlin 전달 JSON 생성
@@ -173,7 +170,11 @@ Gesture Handler의 `Gesture.Pan()`, `Gesture.Pinch()`,
 `Gesture.Rotation()`을 동시에 구성합니다. 진행 중에는 Reanimated
 shared value만 갱신하고 손을 뗄 때 최종 논리 transform 한 번만
 Zustand history에 commit합니다. 올가미 점도 원본 이미지 기준 0–1로
-정규화되며 프로젝트에는 적용 완료 후에만 저장됩니다.
+정규화됩니다. 여러 번 둘러 그린 영역은 합집합으로 계속 추가되며
+프로젝트에는 적용 완료 후에만 저장됩니다. 이미지 가장자리와 연결된
+유사 배경색은 Expo Go에서도 자동으로 투명 처리할 수 있습니다. 사람,
+동물, 복잡한 사물을 의미 단위로 분리하는 ML 모델은 향후 Development
+Build 네이티브 모듈 범위입니다.
 
 ## Android 위젯 아키텍처
 
@@ -181,18 +182,21 @@ React Native는 편집 UI, 프로젝트 모델, 직렬화된 설정 전달을
 담당합니다. Kotlin은 AppWidget 생명주기, 인스턴스별 저장, Bitmap
 합성, `RemoteViews` 갱신을 담당합니다.
 
-예정된 책임:
+각 클래스는 다음 한 가지 책임을 가집니다.
 
 - `ClockWidgetModule.kt`: Expo Module API
 - `ClockWidgetProvider.kt`: AppWidget 생명주기
 - `ClockWidgetUpdater.kt`: 특정/전체 위젯 갱신
 - `ClockWidgetRenderer.kt`: 시계 렌더링 조정
 - `BitmapComposer.kt`: 이미지 레이어 합성
+- `AnalogClockRenderer.kt`: 시침·분침 시간 회전
+- `DigitalClockRenderer.kt`: 숫자 이미지와 fallback 문자 배치
+- `ClockMath.kt`: 각도와 다음 분 경계 순수 계산
+- `WidgetUpdateScheduler.kt`: 앱 전체에 하나인 다음 분 알람
 - `WidgetConfigRepository.kt`: `appWidgetId`별 설정 저장
 
 React Native 코드는 Kotlin 구현을 직접 참조하지 않고
-`src/shared/native/clock-widget` 어댑터만 호출합니다. 현재 어댑터는
-성공을 흉내 내지 않고 명시적인 미지원 오류를 반환합니다.
+`src/shared/native/clock-widget` 어댑터만 호출합니다.
 
 레이어 좌표와 크기는 캔버스 픽셀 좌표, 회전은 시계 방향 degree,
 `anchorX`/`anchorY`는 레이어 경계 기준 `0–1` 정규화 값으로
@@ -204,8 +208,35 @@ transform을 JSON 직렬화 가능한 데이터로 변환합니다. 숨김 레�
 오류로 안내합니다. Kotlin은 올가미를 다시 계산하지 않고 완성된 PNG를
 사용하면 됩니다.
 
-아직 구현하지 않은 범위는 실제 Kotlin Expo Module,
-`AppWidgetProvider`, `RemoteViews`, iOS WidgetKit과 프로젝트 카드용
-자동 preview 캡처입니다. Android namespace를 결정한 뒤
-`modules/clock-widget`을 실제 로컬 Expo Module로 전환하는 것이 다음
-단계입니다.
+### 위젯 적용과 저장
+
+편집기의 `새 위젯 추가`는 Android 8 이상에서 런처의 pin 확인창을
+요청합니다. 런처 목록에서 직접 추가한 미설정 위젯은 편집기에서
+`이 시계로 연결`할 수 있습니다. 설정은
+`sikku_clock_widgets` SharedPreferences에 `appWidgetId`별로 저장되어
+여러 크기와 여러 프로젝트를 독립적으로 처리합니다.
+
+프로젝트 저장 후 `기존 위젯 업데이트`를 누르면 같은 `projectId`의
+인스턴스만 각각의 현재 크기로 다시 렌더링합니다. 프로젝트 삭제 전에는
+사용 중인 위젯 수를 안내하고, 삭제된 프로젝트의 위젯은 설정 JSON을
+정리한 뒤 기본 안내 화면으로 전환합니다. 홈 화면에서 위젯을 제거하면
+해당 ID의 설정만 삭제합니다.
+
+### 렌더링과 갱신 정책
+
+Kotlin은 투명 ARGB Bitmap에 배경과 zIndex 순서의 레이어를 합성합니다.
+아날로그 바늘은 사용자 rotation, anchor→tip 방향 보정, 현재 시간
+회전을 합산합니다. 디지털 시계는 `HH:mm`/`h:mm`, 콜론, 간격과 전체
+transform을 적용하며 누락된 숫자는 시스템 글꼴로 표시합니다.
+배경 이미지는 앱 미리보기처럼 중앙 `cover` 규칙을 사용합니다.
+
+리사이즈 시 `onAppWidgetOptionsChanged`에서 새 Bitmap을 만들며 단순
+확대하지 않습니다. 시간은 모든 인스턴스가 공유하는 한 개의 one-shot
+AlarmManager 예약으로 다음 분 경계마다 갱신하고 실행 후 다음 예약을
+만듭니다. Android 12 이상에서 정확한 알람 권한이 허용되지 않으면
+`setAndAllowWhileIdle`로 자동 대체되므로 절전 상태에서는 갱신이 다소
+늦을 수 있습니다. 재부팅, 앱 교체, 시스템 시간·시간대 변경 시 저장된
+설정을 다시 렌더링하고 예약을 복원합니다.
+
+현재 네이티브 위젯은 Android 전용이며 iOS WidgetKit은 범위에 포함하지
+않습니다.

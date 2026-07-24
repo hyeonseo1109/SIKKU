@@ -18,6 +18,7 @@
       ]
     ],
     "android": {
+      "package": "com.sikku.app",
       "predictiveBackGestureEnabled": true
     },
     "experiments": {

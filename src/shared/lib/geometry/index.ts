@@ -10,4 +10,8 @@ export {
 } from "./coordinate";
 export type { Point, Size } from "./coordinate";
 export { closePolygon, getPolygonArea, isValidPolygon } from "./polygon";
-export { clampLayerToCanvas, normalizeRotation } from "./transform";
+export {
+  clampLayerToCanvas,
+  getHandOrientationOffset,
+  normalizeRotation,
+} from "./transform";

@@ -1,7 +1,11 @@
 import type { ClockLayer } from "@/entities/clock-layer";
 import { normalizeLayerOrder } from "@/entities/clock-layer";
 import type { ClockProject } from "@/entities/clock-project";
-import { getLassoBottomCenter, type ImageAsset } from "@/entities/image-asset";
+import {
+  getFarthestLassoPoint,
+  getLassoBottomCenter,
+  type ImageAsset,
+} from "@/entities/image-asset";
 import { createId } from "@/shared/lib/id";
 
 import type { ImageTarget } from "../model/image-target";
@@ -121,6 +125,26 @@ export const applyImageAsset = (
   );
 
   if (existingLayer) {
+    const isHand =
+      existingLayer.type === "hour-hand" ||
+      existingLayer.type === "minute-hand";
+    const aspectRatio =
+      asset.width > 0 && asset.height > 0 ? asset.width / asset.height : 1;
+    const majorSize = Math.max(
+      existingLayer.transform.width,
+      existingLayer.transform.height,
+    );
+    const replacementSize =
+      aspectRatio >= 1
+        ? { width: majorSize, height: majorSize / aspectRatio }
+        : { width: majorSize * aspectRatio, height: majorSize };
+    const lassoAnchor = isHand ? getLassoBottomCenter(asset) : null;
+    const pivot = lassoAnchor ?? {
+      x: existingLayer.transform.anchorX,
+      y: existingLayer.transform.anchorY,
+    };
+    const lassoTip = lassoAnchor ? getFarthestLassoPoint(asset, pivot) : null;
+
     return {
       ...next,
       layers: next.layers.map((layer) =>
@@ -129,6 +153,19 @@ export const applyImageAsset = (
               ...layer,
               imageUri: asset.processedUri,
               imageAssetId: asset.id,
+              transform: {
+                ...layer.transform,
+                width: replacementSize.width,
+                height: replacementSize.height,
+                anchorX: pivot.x,
+                anchorY: pivot.y,
+                tipX: isHand
+                  ? (lassoTip?.x ?? layer.transform.tipX)
+                  : layer.transform.tipX,
+                tipY: isHand
+                  ? (lassoTip?.y ?? layer.transform.tipY)
+                  : layer.transform.tipY,
+              },
             }
           : layer,
       ),
@@ -138,6 +175,8 @@ export const applyImageAsset = (
   const isHand = target.kind === "hour-hand" || target.kind === "minute-hand";
   const size = getDefaultSize(next, asset, isHand);
   const lassoAnchor = isHand ? getLassoBottomCenter(asset) : null;
+  const pivot = lassoAnchor ?? { x: 0.5, y: isHand ? 1 : 0.5 };
+  const lassoTip = isHand ? getFarthestLassoPoint(asset, pivot) : null;
   const centerX =
     isHand && next.analogConfig
       ? next.analogConfig.centerX
@@ -169,8 +208,10 @@ export const applyImageAsset = (
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
-      anchorX: lassoAnchor?.x ?? 0.5,
-      anchorY: lassoAnchor?.y ?? (isHand ? 1 : 0.5),
+      anchorX: pivot.x,
+      anchorY: pivot.y,
+      tipX: isHand ? (lassoTip?.x ?? 0.5) : undefined,
+      tipY: isHand ? (lassoTip?.y ?? 0) : undefined,
     },
     zIndex: next.layers.length,
     visible: true,

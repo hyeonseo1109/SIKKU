@@ -3,6 +3,7 @@ export {
   ClockWidgetUnavailableError,
 } from "./ClockWidgetNative";
 export type {
-  ApplyClockWidgetParams,
   ClockWidgetNativeModule,
+  InstalledClockWidget,
+  PinWidgetResult,
 } from "./ClockWidgetNative.types";

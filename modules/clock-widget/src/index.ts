@@ -1,4 +1,5 @@
 export type {
-  ApplyClockWidgetParams,
   ClockWidgetNativeModule,
+  InstalledClockWidget,
+  PinWidgetResult,
 } from "../../../src/shared/native/clock-widget";

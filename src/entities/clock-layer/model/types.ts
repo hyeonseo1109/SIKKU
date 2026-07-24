@@ -14,6 +14,9 @@ export type ClockLayerTransform = {
   /** Rotation anchor normalized to the image bounds (0–1). */
   anchorX: number;
   anchorY: number;
+  /** The point that should face the clock value, normalized to 0–1. */
+  tipX?: number;
+  tipY?: number;
 };
 
 export type BaseClockLayer = {

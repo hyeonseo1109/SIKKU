@@ -6,28 +6,37 @@ export const styles = StyleSheet.create({
   container: {
     gap: spacing.sm,
   },
-  preview: {
+  previewFrame: {
     alignSelf: "center",
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
-    maxHeight: 200,
-    overflow: "hidden",
-    width: "70%",
+    padding: spacing.lg,
+    width: "88%",
+  },
+  preview: {
+    alignSelf: "center",
+    overflow: "visible",
   },
   image: {
     height: "100%",
     width: "100%",
   },
   marker: {
+    borderRadius: 9,
+    borderWidth: 2,
+    height: 18,
+    position: "absolute",
+    width: 18,
+  },
+  pivotMarker: {
     backgroundColor: colors.accent,
     borderColor: colors.primary,
-    borderRadius: 8,
-    borderWidth: 2,
-    height: 16,
-    position: "absolute",
-    width: 16,
+  },
+  tipMarker: {
+    backgroundColor: "#55C4BF",
+    borderColor: "#157E7A",
   },
   row: {
     flexDirection: "row",

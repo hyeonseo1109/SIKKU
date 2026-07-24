@@ -1,50 +1,59 @@
 import { create } from "zustand";
 
 import type { NormalizedPoint } from "@/entities/image-asset";
-import { closePolygon } from "@/shared/lib/geometry";
+import { closePolygon, isValidPolygon } from "@/shared/lib/geometry";
 
 type ImageLassoState = {
-  points: NormalizedPoint[];
-  history: NormalizedPoint[][];
+  regions: NormalizedPoint[][];
+  activePoints: NormalizedPoint[];
   beginPath: (point: NormalizedPoint) => void;
   appendPoint: (point: NormalizedPoint) => void;
   finishPath: () => void;
-  restore: (points: NormalizedPoint[]) => void;
+  restore: (regions: NormalizedPoint[][]) => void;
   undo: () => void;
   reset: () => void;
 };
 
 export const useImageLassoStore = create<ImageLassoState>((set) => ({
-  points: [],
-  history: [],
+  regions: [],
+  activePoints: [],
 
-  beginPath: (point) =>
-    set((state) => ({
-      history: [...state.history, state.points].slice(-10),
-      points: [point],
-    })),
+  beginPath: (point) => set({ activePoints: [point] }),
 
   appendPoint: (point) =>
     set((state) => {
-      const previous = state.points.at(-1);
+      const previous = state.activePoints.at(-1);
       if (
         previous &&
         Math.hypot(point.x - previous.x, point.y - previous.y) < 0.006
       ) {
         return state;
       }
-      return { points: [...state.points, point] };
+      return { activePoints: [...state.activePoints, point] };
     }),
 
-  finishPath: () => set((state) => ({ points: closePolygon(state.points) })),
+  finishPath: () =>
+    set((state) => {
+      const region = closePolygon(state.activePoints);
+      return {
+        activePoints: [],
+        regions: isValidPolygon(region)
+          ? [...state.regions, region]
+          : state.regions,
+      };
+    }),
 
-  restore: (points) => set({ points, history: [] }),
+  restore: (regions) =>
+    set({
+      regions: regions.map((region) => [...region]),
+      activePoints: [],
+    }),
 
   undo: () =>
     set((state) => ({
-      points: state.history.at(-1) ?? [],
-      history: state.history.slice(0, -1),
+      activePoints: [],
+      regions: state.regions.slice(0, -1),
     })),
 
-  reset: () => set({ points: [], history: [] }),
+  reset: () => set({ regions: [], activePoints: [] }),
 }));

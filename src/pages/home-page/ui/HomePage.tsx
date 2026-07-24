@@ -2,6 +2,11 @@ import { useCallback } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Alert, View } from "react-native";
 
+import {
+  clearClockWidgetsForProject,
+  getClockWidgets,
+  isClockWidgetSupported,
+} from "@/features/apply-clock-widget";
 import { useProjectListStore } from "@/features/manage-clock-projects";
 import { AppButton, AppScreen, AppText } from "@/shared/ui";
 import { ProjectList } from "@/widgets/project-list";
@@ -23,15 +28,52 @@ export const HomePage = () => {
     }, [load]),
   );
 
-  const handleDelete = (projectId: string) => {
-    Alert.alert("프로젝트 삭제", "시계와 저장된 이미지를 모두 삭제할까요?", [
+  const confirmDelete = (projectId: string, widgetCount: number) => {
+    const message =
+      widgetCount > 0
+        ? `이 프로젝트를 사용하는 홈 화면 위젯이 ${widgetCount}개 있어요. 프로젝트를 삭제하면 해당 위젯은 설정이 필요한 기본 화면으로 변경됩니다.`
+        : "시계와 저장된 이미지를 모두 삭제할까요?";
+    Alert.alert("프로젝트 삭제", message, [
       { text: "취소", style: "cancel" },
       {
         text: "삭제",
         style: "destructive",
-        onPress: () => void remove(projectId),
+        onPress: () => {
+          void (async () => {
+            try {
+              const removed = await remove(projectId);
+              if (removed && widgetCount > 0) {
+                await clearClockWidgetsForProject(projectId);
+              }
+            } catch {
+              Alert.alert(
+                "위젯 정리 실패",
+                "프로젝트는 삭제됐지만 홈 화면 위젯을 정리하지 못했어요.",
+              );
+            }
+          })();
+        },
       },
     ]);
+  };
+
+  const handleDelete = async (projectId: string) => {
+    if (!isClockWidgetSupported()) {
+      confirmDelete(projectId, 0);
+      return;
+    }
+    try {
+      const widgets = await getClockWidgets();
+      confirmDelete(
+        projectId,
+        widgets.filter((widget) => widget.projectId === projectId).length,
+      );
+    } catch {
+      Alert.alert(
+        "위젯 상태 확인 실패",
+        "홈 화면 위젯 상태를 확인하지 못해 프로젝트를 삭제하지 않았어요.",
+      );
+    }
   };
 
   return (
@@ -62,7 +104,7 @@ export const HomePage = () => {
           </View>
         ) : (
           <ProjectList
-            onDelete={handleDelete}
+            onDelete={(projectId) => void handleDelete(projectId)}
             onDuplicate={(projectId) => void duplicate(projectId)}
             onOpen={(projectId) =>
               router.push({

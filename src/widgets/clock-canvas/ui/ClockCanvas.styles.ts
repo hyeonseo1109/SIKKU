@@ -23,6 +23,17 @@ export const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
+    elevation: 0,
+    zIndex: 0,
+  },
+  canvasDismissArea: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    elevation: 1,
+    zIndex: 1,
   },
   layer: {
     position: "absolute",
@@ -42,6 +53,7 @@ export const styles = StyleSheet.create({
   },
   centerCap: {
     position: "absolute",
+    elevation: 1000,
     zIndex: 1000,
     width: 12,
     height: 12,
@@ -52,6 +64,7 @@ export const styles = StyleSheet.create({
   },
   digitalDisplay: {
     position: "absolute",
+    elevation: 100,
     zIndex: 100,
     alignItems: "center",
     justifyContent: "center",

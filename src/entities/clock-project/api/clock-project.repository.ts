@@ -103,6 +103,9 @@ const duplicateData = (
         replaceProjectUri(asset.processedUri, sourceRoot, destinationRoot) ??
         asset.processedUri,
       lassoPoints: asset.lassoPoints?.map((point) => ({ ...point })),
+      lassoRegions: asset.lassoRegions?.map((region) =>
+        region.map((point) => ({ ...point })),
+      ),
     };
   });
 

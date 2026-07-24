@@ -73,6 +73,8 @@ export const projectAssetRepository: ProjectAssetRepository = {
         selectionMode: "full",
         width,
         height,
+        originalWidth: width,
+        originalHeight: height,
         category,
       };
     } catch (error: unknown) {
@@ -82,7 +84,13 @@ export const projectAssetRepository: ProjectAssetRepository = {
     }
   },
 
-  async saveProcessedImage(projectId, asset, pngBytes, lassoPoints) {
+  async saveProcessedImage(
+    projectId,
+    asset,
+    pngBytes,
+    lassoRegions,
+    selectionMode = "lasso",
+  ) {
     ensureProjectDirectories(projectId);
     const processedDirectory = new Directory(
       getProjectDirectory(projectId),
@@ -100,8 +108,9 @@ export const projectAssetRepository: ProjectAssetRepository = {
       return {
         ...asset,
         processedUri: result.uri,
-        selectionMode: "lasso",
-        lassoPoints,
+        selectionMode,
+        lassoPoints: lassoRegions[0],
+        lassoRegions,
       };
     } catch (error: unknown) {
       console.error("[AssetRepository] Failed to save lasso PNG", error);

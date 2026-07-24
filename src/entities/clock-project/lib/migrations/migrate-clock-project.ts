@@ -1,6 +1,9 @@
 import type { ClockProject } from "../../model/types";
 import { CLOCK_PROJECT_SCHEMA_VERSION } from "../../model/types";
-import { getLassoBottomCenter } from "@/entities/image-asset";
+import {
+  getFarthestLassoPoint,
+  getLassoBottomCenter,
+} from "@/entities/image-asset";
 
 const isClockProject = (value: unknown): value is ClockProject => {
   if (typeof value !== "object" || value === null) {
@@ -41,6 +44,14 @@ const alignAnalogHandsToCenter = (project: ClockProject): ClockProject => {
         asset
           ? getLassoBottomCenter(asset)
           : null;
+      const pivot = lassoAnchor ?? {
+        x: layer.transform.anchorX,
+        y: layer.transform.anchorY,
+      };
+      const lassoTip =
+        layer.transform.tipX === undefined && asset
+          ? getFarthestLassoPoint(asset, pivot)
+          : null;
 
       return {
         ...layer,
@@ -50,6 +61,8 @@ const alignAnalogHandsToCenter = (project: ClockProject): ClockProject => {
           y: centerY,
           anchorX: lassoAnchor?.x ?? layer.transform.anchorX,
           anchorY: lassoAnchor?.y ?? layer.transform.anchorY,
+          tipX: layer.transform.tipX ?? lassoTip?.x ?? 0.5,
+          tipY: layer.transform.tipY ?? lassoTip?.y ?? 0,
         },
       };
     }),

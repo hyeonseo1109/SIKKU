@@ -9,6 +9,15 @@ export const normalizeRotation = (rotation: number): number => {
   return snap === 360 ? 0 : (snap ?? normalized);
 };
 
+export const getHandOrientationOffset = (
+  transform: ClockLayerTransform,
+): number => {
+  const dx = (transform.tipX ?? 0.5) - transform.anchorX;
+  const dy = (transform.tipY ?? 0) - transform.anchorY;
+  if (Math.hypot(dx, dy) < 0.001) return 0;
+  return -90 - (Math.atan2(dy, dx) * 180) / Math.PI;
+};
+
 export const clampLayerToCanvas = (
   transform: ClockLayerTransform,
   canvasWidth: number,

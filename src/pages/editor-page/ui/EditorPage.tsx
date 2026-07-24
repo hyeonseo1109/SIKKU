@@ -13,7 +13,6 @@ import type {
   DigitValue,
   DigitalDisplayTransform,
 } from "@/entities/digital-clock";
-import { applyClockWidget } from "@/features/apply-clock-widget";
 import { serializeWidgetConfig } from "@/features/export-widget-config";
 import { type EditorTab, useEditorUiStore } from "@/features/editor-session";
 import {
@@ -25,6 +24,7 @@ import {
 import { AppButton, AppScreen, AppText } from "@/shared/ui";
 import { AnalogAnchorEditor } from "@/widgets/analog-anchor-editor";
 import { ClockCanvas, DIGITAL_SELECTION_ID } from "@/widgets/clock-canvas";
+import { ClockWidgetSettings } from "@/widgets/clock-widget-settings";
 
 import { styles } from "./EditorPage.styles";
 
@@ -84,6 +84,7 @@ export const EditorPage = () => {
   const resetUi = useEditorUiStore((state) => state.reset);
   const setPending = usePendingImageStore((state) => state.setPending);
   const [loading, setLoading] = useState(true);
+  const [anchorDragging, setAnchorDragging] = useState(false);
   const mountedProjectId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -422,6 +423,7 @@ export const EditorPage = () => {
         <ScrollView
           contentContainerStyle={styles.panel}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={!anchorDragging}
         >
           {activeTab === "background" ? (
             <>
@@ -582,12 +584,57 @@ export const EditorPage = () => {
                 <AnalogAnchorEditor
                   key={`${selectedLayer.id}-${selectedLayer.imageUri}`}
                   layer={selectedLayer}
-                  onCommit={(anchorX, anchorY) =>
+                  onDragStateChange={setAnchorDragging}
+                  onCommit={({ pivotX, pivotY, tipX, tipY }) =>
                     updateLayerTransform(selectedLayer.id, {
                       ...selectedLayer.transform,
-                      anchorX,
-                      anchorY,
+                      anchorX: pivotX,
+                      anchorY: pivotY,
+                      tipX,
+                      tipY,
                     })
+                  }
+                  onResize={(factor, axis) =>
+                    (() => {
+                      const { width, height } = selectedLayer.transform;
+                      const endpointDeltaX = Math.abs(
+                        (selectedLayer.transform.tipX ?? 0.5) -
+                          selectedLayer.transform.anchorX,
+                      );
+                      const endpointDeltaY = Math.abs(
+                        (selectedLayer.transform.tipY ?? 0) -
+                          selectedLayer.transform.anchorY,
+                      );
+                      const lengthUsesWidth = endpointDeltaX > endpointDeltaY;
+                      const resizeWidth =
+                        axis === "both" ||
+                        (axis === "length" && lengthUsesWidth) ||
+                        (axis === "thickness" && !lengthUsesWidth);
+                      const resizeHeight =
+                        axis === "both" ||
+                        (axis === "length" && !lengthUsesWidth) ||
+                        (axis === "thickness" && lengthUsesWidth);
+                      const nextWidth = !resizeWidth
+                        ? width
+                        : Math.max(
+                            12,
+                            Math.min(project.canvas.width * 2, width * factor),
+                          );
+                      const nextHeight = !resizeHeight
+                        ? height
+                        : Math.max(
+                            12,
+                            Math.min(
+                              project.canvas.height * 2,
+                              height * factor,
+                            ),
+                          );
+                      updateLayerTransform(selectedLayer.id, {
+                        ...selectedLayer.transform,
+                        width: nextWidth,
+                        height: nextHeight,
+                      });
+                    })()
                   }
                 />
               ) : (
@@ -871,31 +918,7 @@ export const EditorPage = () => {
                 }}
                 variant="secondary"
               />
-              <AppButton
-                label="Android 위젯 적용"
-                onPress={() => {
-                  try {
-                    serializeWidgetConfig(project);
-                    void save()
-                      .then(() => applyClockWidget(project.id))
-                      .catch((error: unknown) =>
-                        Alert.alert(
-                          "Development Build 필요",
-                          error instanceof Error
-                            ? error.message
-                            : "네이티브 모듈을 사용할 수 없어요.",
-                        ),
-                      );
-                  } catch (error: unknown) {
-                    Alert.alert(
-                      "적용할 수 없어요",
-                      error instanceof Error
-                        ? error.message
-                        : "이미지 파일을 확인해 주세요.",
-                    );
-                  }
-                }}
-              />
+              <ClockWidgetSettings project={project} saveProject={save} />
             </>
           ) : null}
         </ScrollView>

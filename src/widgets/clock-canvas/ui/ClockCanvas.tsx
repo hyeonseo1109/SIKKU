@@ -88,9 +88,7 @@ export const ClockCanvas = ({
   return (
     <View onLayout={handleLayout} style={styles.stage}>
       {availableWidth > 0 ? (
-        <Pressable
-          accessibilityLabel="시계 캔버스"
-          onPress={() => onSelectLayer(null)}
+        <View
           style={[
             styles.canvas,
             {
@@ -103,10 +101,17 @@ export const ClockCanvas = ({
           {project.canvas.backgroundImageUri ? (
             <Image
               contentFit="cover"
+              pointerEvents="none"
               source={project.canvas.backgroundImageUri}
               style={styles.backgroundImage}
             />
           ) : null}
+
+          <Pressable
+            accessibilityLabel="시계 캔버스"
+            onPress={() => onSelectLayer(null)}
+            style={styles.canvasDismissArea}
+          />
 
           {project.layers
             .filter((layer) => layer.visible)
@@ -130,7 +135,7 @@ export const ClockCanvas = ({
                 <TransformableLayer
                   canvasHeight={project.canvas.height}
                   canvasWidth={project.canvas.width}
-                  key={layer.id}
+                  key={`${layer.id}-${layer.zIndex}`}
                   layer={renderedLayer}
                   onSelect={onSelectLayer}
                   onTransformEnd={onTransformLayer}
@@ -174,7 +179,7 @@ export const ClockCanvas = ({
               ]}
             />
           ) : null}
-        </Pressable>
+        </View>
       ) : null}
     </View>
   );
