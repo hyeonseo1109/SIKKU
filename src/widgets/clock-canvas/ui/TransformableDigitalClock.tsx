@@ -42,6 +42,7 @@ export const TransformableDigitalClock = ({
   const gestureScale = useSharedValue(1);
   const screenWidth = config.transform.width * scale;
   const screenHeight = config.transform.height * scale;
+  const normalizedRotation = normalizeRotation(config.transform.rotation);
 
   const commitPan = useCallback(
     (dx: number, dy: number) => {
@@ -96,7 +97,7 @@ export const TransformableDigitalClock = ({
       { translateY: translateY.value },
       { scale: gestureScale.value },
       {
-        rotate: `${normalizeRotation(config.transform.rotation)}deg`,
+        rotate: `${normalizedRotation}deg`,
       },
     ],
   }));

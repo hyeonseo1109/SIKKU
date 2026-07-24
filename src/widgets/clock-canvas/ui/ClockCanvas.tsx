@@ -8,13 +8,14 @@ import type { ClockLayerTransform } from "@/entities/clock-layer";
 import type { ClockProject } from "@/entities/clock-project";
 import type { DigitalDisplayTransform } from "@/entities/digital-clock";
 import { useCurrentTime } from "@/shared/hooks";
-import { getCanvasScale } from "@/shared/lib/geometry";
+import { getCanvasScale, logicalToScreenPoint } from "@/shared/lib/geometry";
 
 import { styles } from "./ClockCanvas.styles";
 import { TransformableDigitalClock } from "./TransformableDigitalClock";
 import { TransformableLayer } from "./TransformableLayer";
 
 const MAX_CANVAS_HEIGHT = 390;
+const CENTER_CAP_SIZE = 12;
 const DIGITAL_SELECTION_ID = "__digital__";
 
 export type ClockCanvasProps = {
@@ -74,6 +75,15 @@ export const ClockCanvas = ({
     previewDate.getMinutes(),
     previewDate.getSeconds(),
   );
+  const analogCenter = project.analogConfig
+    ? logicalToScreenPoint(
+        {
+          x: project.analogConfig.centerX,
+          y: project.analogConfig.centerY,
+        },
+        scale,
+      )
+    : null;
 
   return (
     <View onLayout={handleLayout} style={styles.stage}>
@@ -101,25 +111,41 @@ export const ClockCanvas = ({
           {project.layers
             .filter((layer) => layer.visible)
             .sort((a, b) => a.zIndex - b.zIndex)
-            .map((layer) => (
-              <TransformableLayer
-                canvasHeight={project.canvas.height}
-                canvasWidth={project.canvas.width}
-                key={layer.id}
-                layer={layer}
-                onSelect={onSelectLayer}
-                onTransformEnd={onTransformLayer}
-                scale={scale}
-                selected={selectedLayerId === layer.id}
-                timeRotation={
-                  layer.type === "hour-hand"
-                    ? hourAngle
-                    : layer.type === "minute-hand"
-                      ? minuteAngle
-                      : 0
-                }
-              />
-            ))}
+            .map((layer) => {
+              const isHand =
+                layer.type === "hour-hand" || layer.type === "minute-hand";
+              const renderedLayer =
+                isHand && project.analogConfig
+                  ? {
+                      ...layer,
+                      transform: {
+                        ...layer.transform,
+                        x: project.analogConfig.centerX,
+                        y: project.analogConfig.centerY,
+                      },
+                    }
+                  : layer;
+
+              return (
+                <TransformableLayer
+                  canvasHeight={project.canvas.height}
+                  canvasWidth={project.canvas.width}
+                  key={layer.id}
+                  layer={renderedLayer}
+                  onSelect={onSelectLayer}
+                  onTransformEnd={onTransformLayer}
+                  scale={scale}
+                  selected={selectedLayerId === layer.id}
+                  timeRotation={
+                    layer.type === "hour-hand"
+                      ? hourAngle
+                      : layer.type === "minute-hand"
+                        ? minuteAngle
+                        : 0
+                  }
+                />
+              );
+            })}
 
           {project.type === "digital" && project.digitalConfig ? (
             <TransformableDigitalClock
@@ -134,14 +160,16 @@ export const ClockCanvas = ({
             />
           ) : null}
 
-          {project.type === "analog" && project.analogConfig?.showCenterCap ? (
+          {project.type === "analog" &&
+          project.analogConfig?.showCenterCap &&
+          analogCenter ? (
             <View
               pointerEvents="none"
               style={[
                 styles.centerCap,
                 {
-                  left: project.analogConfig.centerX * scale - 6,
-                  top: project.analogConfig.centerY * scale - 6,
+                  left: analogCenter.x - CENTER_CAP_SIZE / 2,
+                  top: analogCenter.y - CENTER_CAP_SIZE / 2,
                 },
               ]}
             />

@@ -35,7 +35,14 @@ const TABS: { key: EditorTab; label: string }[] = [
   { key: "layers", label: "레이어" },
   { key: "settings", label: "설정" },
 ];
-const BACKGROUNDS = ["#FFFFFF", "#FFF8F2", "#F3E5D8", "#1D1B1A", "#BBD7EA"];
+const BACKGROUNDS = [
+  "transparent",
+  "#FFFFFF",
+  "#FFF8F2",
+  "#F3E5D8",
+  "#1D1B1A",
+  "#BBD7EA",
+] as const;
 const DIGITS: DigitValue[] = [
   "0",
   "1",
@@ -423,7 +430,7 @@ export const EditorPage = () => {
                 {BACKGROUNDS.map((color) => (
                   <AppButton
                     key={color}
-                    label={color}
+                    label={color === "transparent" ? "투명" : color}
                     onPress={() =>
                       changeProject((current) => ({
                         ...current,

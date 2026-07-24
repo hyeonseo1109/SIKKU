@@ -1,7 +1,7 @@
 import type { ClockLayer } from "@/entities/clock-layer";
 import { normalizeLayerOrder } from "@/entities/clock-layer";
 import type { ClockProject } from "@/entities/clock-project";
-import type { ImageAsset } from "@/entities/image-asset";
+import { getLassoBottomCenter, type ImageAsset } from "@/entities/image-asset";
 import { createId } from "@/shared/lib/id";
 
 import type { ImageTarget } from "../model/image-target";
@@ -137,6 +137,7 @@ export const applyImageAsset = (
 
   const isHand = target.kind === "hour-hand" || target.kind === "minute-hand";
   const size = getDefaultSize(next, asset, isHand);
+  const lassoAnchor = isHand ? getLassoBottomCenter(asset) : null;
   const centerX =
     isHand && next.analogConfig
       ? next.analogConfig.centerX
@@ -168,8 +169,8 @@ export const applyImageAsset = (
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
-      anchorX: 0.5,
-      anchorY: isHand ? 1 : 0.5,
+      anchorX: lassoAnchor?.x ?? 0.5,
+      anchorY: lassoAnchor?.y ?? (isHand ? 1 : 0.5),
     },
     zIndex: next.layers.length,
     visible: true,
