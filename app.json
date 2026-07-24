@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "시꾸",
+    "slug": "sikku",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "sikku",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "시계에 사용할 이미지를 선택할 수 있도록 사진 접근을 허용해 주세요.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "android": {
+      "predictiveBackGestureEnabled": true
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
