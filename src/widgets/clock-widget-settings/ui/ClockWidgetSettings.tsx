@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Platform, View } from "react-native";
+import { Platform, View } from "react-native";
 
 import type { ClockProject } from "@/entities/clock-project";
 import {
@@ -9,7 +9,7 @@ import {
   updateClockWidgets,
 } from "@/features/apply-clock-widget";
 import type { InstalledClockWidget } from "@/shared/native/clock-widget";
-import { AppButton, AppText } from "@/shared/ui";
+import { AppButton, AppText, useAppDialog } from "@/shared/ui";
 
 import { AddClockWidgetButton } from "./AddClockWidgetButton";
 import { styles } from "./ClockWidgetSettings.styles";
@@ -20,6 +20,7 @@ type Props = {
 };
 
 export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
+  const { showDialog } = useAppDialog();
   const supported = isClockWidgetSupported();
   const [widgets, setWidgets] = useState<InstalledClockWidget[]>([]);
   const [busy, setBusy] = useState(false);
@@ -61,10 +62,10 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
       await action();
       await refresh();
     } catch (error: unknown) {
-      Alert.alert(
-        "위젯 작업 실패",
-        error instanceof Error ? error.message : "다시 시도해 주세요.",
-      );
+      showDialog({
+        title: "위젯 작업 실패",
+        message: error instanceof Error ? error.message : "다시 시도해 주세요.",
+      });
     } finally {
       setBusy(false);
     }
@@ -73,19 +74,19 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
   const updateExisting = () =>
     runSavedAction(async () => {
       const updatedIds = await updateClockWidgets(project);
-      Alert.alert(
-        "위젯 업데이트 완료",
-        `${updatedIds.length}개의 홈 화면 위젯을 업데이트했어요.`,
-      );
+      showDialog({
+        title: "위젯 업데이트 완료",
+        message: `${updatedIds.length}개의 홈 화면 위젯을 업데이트했어요.`,
+      });
     });
 
   const configureUnassigned = () =>
     runSavedAction(async () => {
       const configuredIds = await configureUnassignedClockWidgets(project);
-      Alert.alert(
-        "위젯 연결 완료",
-        `${configuredIds.length}개의 위젯에 이 시계를 적용했어요.`,
-      );
+      showDialog({
+        title: "위젯 연결 완료",
+        message: `${configuredIds.length}개의 위젯에 이 시계를 적용했어요.`,
+      });
     });
 
   const latestUpdate = projectWidgets.reduce<number | undefined>(

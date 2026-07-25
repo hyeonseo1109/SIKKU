@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, TextInput, View } from "react-native";
+import { TextInput, View } from "react-native";
 
 import type { CanvasPreset, ClockType } from "@/entities/clock-project";
 import { createClockProject } from "@/features/create-clock-project";
-import { AppButton, AppScreen, AppText } from "@/shared/ui";
+import { AppButton, AppScreen, AppText, useAppDialog } from "@/shared/ui";
 
 import { styles } from "./CreateProjectPage.styles";
 
@@ -23,6 +23,7 @@ const presets: { label: string; value: CanvasPreset }[] = [
 
 export const CreateProjectPage = () => {
   const router = useRouter();
+  const { showDialog } = useAppDialog();
   const nameRef = useRef(DEFAULT_PROJECT_NAME);
   const [type, setType] = useState<ClockType>("analog");
   const [preset, setPreset] = useState<CanvasPreset>("square");
@@ -31,7 +32,10 @@ export const CreateProjectPage = () => {
   const handleCreate = async () => {
     const name = nameRef.current.trim();
     if (!name) {
-      Alert.alert("이름을 입력해 주세요", "시계 이름은 비워둘 수 없어요.");
+      showDialog({
+        title: "이름을 입력해 주세요",
+        message: "시계 이름은 비워둘 수 없어요.",
+      });
       return;
     }
 
@@ -47,10 +51,13 @@ export const CreateProjectPage = () => {
         params: { projectId: project.id },
       });
     } catch (error: unknown) {
-      Alert.alert(
-        "프로젝트 생성 실패",
-        error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요.",
-      );
+      showDialog({
+        title: "프로젝트 생성 실패",
+        message:
+          error instanceof Error
+            ? error.message
+            : "잠시 후 다시 시도해 주세요.",
+      });
     } finally {
       setCreating(false);
     }

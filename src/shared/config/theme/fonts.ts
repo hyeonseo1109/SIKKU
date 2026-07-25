@@ -1,5 +1,5 @@
 export const fontFamilies = {
-  regular: "DalseoHealingMedium",
-  bold: "DalseoHealingBold",
-  display: "DalseoDarling",
+  regular: "NoonnuBasicGothicRegular",
+  bold: "NoonnuBasicGothicRegular",
+  display: "NoonnuBasicGothicRegular",
 } as const;

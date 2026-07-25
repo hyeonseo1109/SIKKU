@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import type { ClockLayer, ClockLayerTransform } from "@/entities/clock-layer";
 import { moveLayer, normalizeLayerOrder } from "@/entities/clock-layer";
@@ -37,7 +37,7 @@ import {
   usePendingImageStore,
 } from "@/features/select-image";
 import { updateProjectPreview } from "@/features/update-project-preview";
-import { AppButton, AppScreen, AppText } from "@/shared/ui";
+import { AppButton, AppScreen, AppText, useAppDialog } from "@/shared/ui";
 import { AnalogAnchorEditor } from "@/widgets/analog-anchor-editor";
 import {
   ClockCanvas,
@@ -108,6 +108,7 @@ const categoryForTarget = (target: ImageTarget) => {
 export const EditorPage = () => {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const router = useRouter();
+  const { showDialog } = useAppDialog();
   const project = useClockProjectStore((state) => state.project);
   const saveStatus = useClockProjectStore((state) => state.saveStatus);
   const past = useClockProjectStore((state) => state.past);
@@ -202,20 +203,20 @@ export const EditorPage = () => {
         if (active) {
           setProject(null);
           setLoading(false);
-          Alert.alert(
-            "프로젝트를 열지 못했어요",
-            "저장된 데이터가 손상되었거나 사라졌어요.",
-          );
+          showDialog({
+            title: "프로젝트를 열지 못했어요",
+            message: "저장된 데이터가 손상되었거나 사라졌어요.",
+          });
         }
       });
     return () => {
       active = false;
     };
-  }, [project?.id, projectId, setProject]);
+  }, [project?.id, projectId, setProject, showDialog]);
 
   useEffect(() => {
     if (saveStatus !== "dirty") return;
-    const timer = setTimeout(() => void saveEditorProject(), 750);
+    const timer = setTimeout(() => void saveEditorProject(), 2000);
     return () => clearTimeout(timer);
   }, [project?.updatedAt, saveEditorProject, saveStatus]);
 
@@ -249,48 +250,59 @@ export const EditorPage = () => {
           categoryForTarget(target),
         );
         if (result.status === "canceled") return;
-        Alert.alert("이미지 사용 범위", "이미지 전체를 쓸까요?", [
-          {
-            text: "취소",
-            style: "cancel",
-            onPress: () =>
-              void projectAssetRepository.removeAsset(project.id, result.asset),
-          },
-          {
-            text: "영역 선택",
-            onPress: () => {
-              setPending({
-                projectId: project.id,
-                asset: result.asset,
-                target,
-              });
-              router.push("/image-lasso");
+        showDialog({
+          title: "이미지 사용 범위",
+          message: "이미지 전체를 쓸까요?",
+          actions: [
+            {
+              label: "취소",
+              onPress: () =>
+                void projectAssetRepository.removeAsset(
+                  project.id,
+                  result.asset,
+                ),
             },
-          },
-          {
-            text: "전체 사용",
-            onPress: () => {
-              changeProject((current) =>
-                applyImageAsset(current, result.asset, target),
-              );
+            {
+              label: "영역 선택",
+              onPress: () => {
+                setPending({
+                  projectId: project.id,
+                  asset: result.asset,
+                  target,
+                });
+                router.push("/image-lasso");
+              },
             },
-          },
-        ]);
+            {
+              label: "전체 사용",
+              tone: "primary",
+              onPress: () => {
+                changeProject((current) =>
+                  applyImageAsset(current, result.asset, target),
+                );
+              },
+            },
+          ],
+        });
       } catch (error: unknown) {
-        Alert.alert(
-          "이미지를 가져오지 못했어요",
-          error instanceof Error ? error.message : "다시 시도해 주세요.",
-        );
+        showDialog({
+          title: "이미지를 가져오지 못했어요",
+          message:
+            error instanceof Error ? error.message : "다시 시도해 주세요.",
+        });
       }
     },
-    [changeProject, project, router, setPending],
+    [changeProject, project, router, setPending, showDialog],
   );
 
   const reeditLayer = (layer: ClockLayer) => {
     if (!project) return;
     const asset = project.assets.find((item) => item.id === layer.imageAssetId);
     if (!asset) {
-      Alert.alert("원본 없음", "이 이미지의 원본 파일을 찾을 수 없어요.");
+      showDialog({
+        title: "원본 없음",
+        message: "이 이미지의 원본 파일을 찾을 수 없어요.",
+      });
       return;
     }
     setPending({
@@ -322,17 +334,17 @@ export const EditorPage = () => {
       }));
       return;
     }
-    Alert.alert(
-      `${digit === "colon" ? ":" : digit} 이미지`,
-      "작업을 선택해 주세요.",
-      [
-        { text: "취소", style: "cancel" },
+    showDialog({
+      title: `${digit === "colon" ? ":" : digit} 이미지`,
+      message: "작업을 선택해 주세요.",
+      actions: [
+        { label: "취소" },
         {
-          text: "새 이미지로 교체",
+          label: "새 이미지로 교체",
           onPress: () => void chooseImage({ kind: "digit", digit }),
         },
         {
-          text: "영역 다시 선택",
+          label: "영역 다시 선택",
           onPress: () => {
             setPending({
               projectId: project.id,
@@ -343,8 +355,8 @@ export const EditorPage = () => {
           },
         },
         {
-          text: "삭제",
-          style: "destructive",
+          label: "삭제",
+          tone: "danger",
           onPress: () => {
             changeProject((current) => {
               if (!current.digitalConfig) return current;
@@ -369,7 +381,7 @@ export const EditorPage = () => {
           },
         },
       ],
-    );
+    });
   };
 
   const chooseHand = (
@@ -381,14 +393,15 @@ export const EditorPage = () => {
       choose();
       return;
     }
-    Alert.alert(
-      kind === "hour-hand" ? "시침 교체" : "분침 교체",
-      "현재 바늘 이미지를 새 이미지로 교체할까요? 위치와 크기는 유지돼요.",
-      [
-        { text: "취소", style: "cancel" },
-        { text: "교체", onPress: choose },
+    showDialog({
+      title: kind === "hour-hand" ? "시침 교체" : "분침 교체",
+      message:
+        "현재 바늘 이미지를 새 이미지로 교체할까요? 위치와 크기는 유지돼요.",
+      actions: [
+        { label: "취소" },
+        { label: "교체", onPress: choose, tone: "primary" },
       ],
-    );
+    });
   };
 
   const updateLayerTransform = (
@@ -456,7 +469,10 @@ export const EditorPage = () => {
 
   const editHand = (layerId: string | undefined, label: string) => {
     if (!layerId) {
-      Alert.alert(`${label} 없음`, `먼저 ${label} 이미지를 추가해 주세요.`);
+      showDialog({
+        title: `${label} 없음`,
+        message: `먼저 ${label} 이미지를 추가해 주세요.`,
+      });
       return;
     }
     selectLayer(layerId);
@@ -1242,17 +1258,18 @@ export const EditorPage = () => {
                 onPress={() => {
                   try {
                     const json = serializeWidgetConfig(project);
-                    Alert.alert(
-                      "설정 검증 완료",
-                      `네이티브에 전달할 JSON ${json.length.toLocaleString()}자를 만들었어요.`,
-                    );
+                    showDialog({
+                      title: "설정 검증 완료",
+                      message: `네이티브에 전달할 JSON ${json.length.toLocaleString()}자를 만들었어요.`,
+                    });
                   } catch (error: unknown) {
-                    Alert.alert(
-                      "설정 검증 실패",
-                      error instanceof Error
-                        ? error.message
-                        : "파일을 확인해 주세요.",
-                    );
+                    showDialog({
+                      title: "설정 검증 실패",
+                      message:
+                        error instanceof Error
+                          ? error.message
+                          : "파일을 확인해 주세요.",
+                    });
                   }
                 }}
                 variant="secondary"

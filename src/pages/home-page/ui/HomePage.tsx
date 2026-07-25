@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 
 import {
   clearClockWidgetsForProject,
@@ -8,13 +8,14 @@ import {
   isClockWidgetSupported,
 } from "@/features/apply-clock-widget";
 import { useProjectListStore } from "@/features/manage-clock-projects";
-import { AppButton, AppScreen, AppText } from "@/shared/ui";
+import { AppButton, AppScreen, AppText, useAppDialog } from "@/shared/ui";
 import { ProjectList } from "@/widgets/project-list";
 
 import { styles } from "./HomePage.styles";
 
 export const HomePage = () => {
   const router = useRouter();
+  const { showDialog } = useAppDialog();
   const projects = useProjectListStore((state) => state.projects);
   const loading = useProjectListStore((state) => state.loading);
   const error = useProjectListStore((state) => state.error);
@@ -33,28 +34,33 @@ export const HomePage = () => {
       widgetCount > 0
         ? `이 프로젝트를 사용하는 홈 화면 위젯이 ${widgetCount}개 있어요. 프로젝트를 삭제하면 해당 위젯은 설정이 필요한 기본 화면으로 변경됩니다.`
         : "시계와 저장된 이미지를 모두 삭제할까요?";
-    Alert.alert("프로젝트 삭제", message, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            try {
-              const removed = await remove(projectId);
-              if (removed && widgetCount > 0) {
-                await clearClockWidgetsForProject(projectId);
+    showDialog({
+      title: "프로젝트 삭제",
+      message,
+      actions: [
+        { label: "취소" },
+        {
+          label: "삭제",
+          tone: "danger",
+          onPress: () => {
+            void (async () => {
+              try {
+                const removed = await remove(projectId);
+                if (removed && widgetCount > 0) {
+                  await clearClockWidgetsForProject(projectId);
+                }
+              } catch {
+                showDialog({
+                  title: "위젯 정리 실패",
+                  message:
+                    "프로젝트는 삭제됐지만 홈 화면 위젯을 정리하지 못했어요.",
+                });
               }
-            } catch {
-              Alert.alert(
-                "위젯 정리 실패",
-                "프로젝트는 삭제됐지만 홈 화면 위젯을 정리하지 못했어요.",
-              );
-            }
-          })();
+            })();
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const handleDelete = async (projectId: string) => {
@@ -69,10 +75,11 @@ export const HomePage = () => {
         widgets.filter((widget) => widget.projectId === projectId).length,
       );
     } catch {
-      Alert.alert(
-        "위젯 상태 확인 실패",
-        "홈 화면 위젯 상태를 확인하지 못해 프로젝트를 삭제하지 않았어요.",
-      );
+      showDialog({
+        title: "위젯 상태 확인 실패",
+        message:
+          "홈 화면 위젯 상태를 확인하지 못해 프로젝트를 삭제하지 않았어요.",
+      });
     }
   };
 

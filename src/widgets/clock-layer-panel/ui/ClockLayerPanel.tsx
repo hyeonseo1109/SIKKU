@@ -1,7 +1,7 @@
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 
 import type { ClockLayer } from "@/entities/clock-layer";
-import { AppButton, AppText } from "@/shared/ui";
+import { AppButton, AppText, useAppDialog } from "@/shared/ui";
 
 import { styles } from "./ClockLayerPanel.styles";
 
@@ -30,6 +30,7 @@ export const ClockLayerPanel = ({
   onToggleVisibility,
   selectedLayerId,
 }: ClockLayerPanelProps) => {
+  const { showDialog } = useAppDialog();
   const orderedLayers = [...layers].sort((a, b) => b.zIndex - a.zIndex);
   const selectedLayer = layers.find((layer) => layer.id === selectedLayerId);
   const isFront = selectedLayer?.zIndex === layers.length - 1;
@@ -110,18 +111,18 @@ export const ClockLayerPanel = ({
             <AppButton
               label="삭제"
               onPress={() =>
-                Alert.alert(
-                  "레이어 삭제",
-                  `${selectedLayer.name}을 삭제할까요?`,
-                  [
-                    { text: "취소", style: "cancel" },
+                showDialog({
+                  title: "레이어 삭제",
+                  message: `${selectedLayer.name}을 삭제할까요?`,
+                  actions: [
+                    { label: "취소" },
                     {
-                      text: "삭제",
-                      style: "destructive",
+                      label: "삭제",
+                      tone: "danger",
                       onPress: () => onRemove(selectedLayer),
                     },
                   ],
-                )
+                })
               }
               variant="secondary"
             />

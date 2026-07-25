@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 
 import {
   projectAssetRepository,
@@ -15,13 +15,14 @@ import { useImageLassoStore } from "@/features/select-image-area";
 import { applyImageAsset, usePendingImageStore } from "@/features/select-image";
 import type { Size } from "@/shared/lib/geometry";
 import { isValidPolygon } from "@/shared/lib/geometry";
-import { AppButton, AppScreen, AppText } from "@/shared/ui";
+import { AppButton, AppScreen, AppText, useAppDialog } from "@/shared/ui";
 import { ImageLassoEditor } from "@/widgets/image-lasso-editor";
 
 import { styles } from "./ImageLassoPage.styles";
 
 export const ImageLassoPage = () => {
   const router = useRouter();
+  const { showDialog } = useAppDialog();
   const pending = usePendingImageStore((state) => state.pending);
   const clearPending = usePendingImageStore((state) => state.clear);
   const project = useClockProjectStore((state) => state.project);
@@ -57,14 +58,17 @@ export const ImageLassoPage = () => {
 
   const apply = async () => {
     if (!pending || !project || pending.projectId !== project.id) {
-      Alert.alert("편집 정보 없음", "이미지를 다시 선택해 주세요.");
+      showDialog({
+        title: "편집 정보 없음",
+        message: "이미지를 다시 선택해 주세요.",
+      });
       return;
     }
     if (!regions.some(isValidPolygon)) {
-      Alert.alert(
-        "선택 영역이 너무 작아요",
-        "사용할 영역의 테두리를 조금 더 크게 그려주세요.",
-      );
+      showDialog({
+        title: "선택 영역이 너무 작아요",
+        message: "사용할 영역의 테두리를 조금 더 크게 그려주세요.",
+      });
       return;
     }
 
@@ -92,10 +96,13 @@ export const ImageLassoPage = () => {
       router.back();
     } catch (error: unknown) {
       console.error("[ImageLasso] Failed to apply mask", error);
-      Alert.alert(
-        "투명 PNG 생성 실패",
-        error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요.",
-      );
+      showDialog({
+        title: "투명 PNG 생성 실패",
+        message:
+          error instanceof Error
+            ? error.message
+            : "잠시 후 다시 시도해 주세요.",
+      });
     } finally {
       setApplying(false);
     }
@@ -103,7 +110,10 @@ export const ImageLassoPage = () => {
 
   const applyAutoBackgroundRemoval = async () => {
     if (!pending || !project || pending.projectId !== project.id) {
-      Alert.alert("편집 정보 없음", "이미지를 다시 선택해 주세요.");
+      showDialog({
+        title: "편집 정보 없음",
+        message: "이미지를 다시 선택해 주세요.",
+      });
       return;
     }
     setApplying(true);
@@ -145,10 +155,10 @@ export const ImageLassoPage = () => {
       router.back();
     } catch (error: unknown) {
       console.error("[AutoBackground] Failed to remove background", error);
-      Alert.alert(
-        "자동 배경 제거 실패",
-        error instanceof Error ? error.message : "다시 시도해 주세요.",
-      );
+      showDialog({
+        title: "자동 배경 제거 실패",
+        message: error instanceof Error ? error.message : "다시 시도해 주세요.",
+      });
     } finally {
       setApplying(false);
     }
