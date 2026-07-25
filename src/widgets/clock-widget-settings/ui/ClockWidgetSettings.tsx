@@ -6,12 +6,12 @@ import {
   configureUnassignedClockWidgets,
   getClockWidgets,
   isClockWidgetSupported,
-  requestClockWidget,
   updateClockWidgets,
 } from "@/features/apply-clock-widget";
 import type { InstalledClockWidget } from "@/shared/native/clock-widget";
 import { AppButton, AppText } from "@/shared/ui";
 
+import { AddClockWidgetButton } from "./AddClockWidgetButton";
 import { styles } from "./ClockWidgetSettings.styles";
 
 type Props = {
@@ -69,25 +69,6 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
       setBusy(false);
     }
   };
-
-  const requestPin = () =>
-    runSavedAction(async () => {
-      const result = await requestClockWidget(project);
-      if (result.status === "unsupported") {
-        Alert.alert(
-          "런처에서 지원하지 않아요",
-          "홈 화면을 길게 눌러 위젯 목록에서 시꾸를 추가해 주세요.",
-        );
-        return;
-      }
-      if (result.status === "failed") {
-        throw new Error(result.message ?? "위젯 추가 요청에 실패했어요.");
-      }
-      Alert.alert(
-        "위젯 추가 요청됨",
-        "홈 화면의 확인 창에서 시꾸 위젯을 추가해 주세요.",
-      );
-    });
 
   const updateExisting = () =>
     runSavedAction(async () => {
@@ -163,10 +144,12 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
       ) : null}
       <View style={styles.row}>
         <View style={styles.action}>
-          <AppButton
+          <AddClockWidgetButton
             disabled={busy}
-            label={busy ? "처리 중…" : "새 위젯 추가"}
-            onPress={() => void requestPin()}
+            label="새 위젯 추가"
+            onCompleted={refresh}
+            project={project}
+            saveProject={saveProject}
           />
         </View>
         <View style={styles.action}>

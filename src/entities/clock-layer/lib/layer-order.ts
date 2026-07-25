@@ -1,9 +1,10 @@
 import type { ClockLayer } from "../model/types";
 
+const assignLayerIndexes = (layers: ClockLayer[]): ClockLayer[] =>
+  layers.map((layer, zIndex) => ({ ...layer, zIndex }));
+
 export const normalizeLayerOrder = (layers: ClockLayer[]): ClockLayer[] => {
-  return [...layers]
-    .sort((a, b) => a.zIndex - b.zIndex)
-    .map((layer, zIndex) => ({ ...layer, zIndex }));
+  return assignLayerIndexes([...layers].sort((a, b) => a.zIndex - b.zIndex));
 };
 
 export const moveLayer = (
@@ -35,5 +36,5 @@ export const moveLayer = (
   }
 
   result.splice(destination, 0, layer);
-  return normalizeLayerOrder(result);
+  return assignLayerIndexes(result);
 };

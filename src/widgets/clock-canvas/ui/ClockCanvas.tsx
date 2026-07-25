@@ -135,7 +135,7 @@ export const ClockCanvas = ({
                 <TransformableLayer
                   canvasHeight={project.canvas.height}
                   canvasWidth={project.canvas.width}
-                  key={`${layer.id}-${layer.zIndex}`}
+                  key={layer.id}
                   layer={renderedLayer}
                   onSelect={onSelectLayer}
                   onTransformEnd={onTransformLayer}

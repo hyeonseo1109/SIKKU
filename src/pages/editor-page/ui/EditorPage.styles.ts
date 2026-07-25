@@ -22,6 +22,9 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  widgetAction: {
+    paddingBottom: spacing.sm,
+  },
   toolbar: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -55,11 +58,5 @@ export const styles = StyleSheet.create({
   },
   rowItem: {
     flex: 1,
-  },
-  layerCard: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    gap: spacing.sm,
-    padding: spacing.sm,
   },
 });

@@ -24,7 +24,11 @@ import {
 import { AppButton, AppScreen, AppText } from "@/shared/ui";
 import { AnalogAnchorEditor } from "@/widgets/analog-anchor-editor";
 import { ClockCanvas, DIGITAL_SELECTION_ID } from "@/widgets/clock-canvas";
-import { ClockWidgetSettings } from "@/widgets/clock-widget-settings";
+import { ClockLayerPanel } from "@/widgets/clock-layer-panel";
+import {
+  AddClockWidgetButton,
+  ClockWidgetSettings,
+} from "@/widgets/clock-widget-settings";
 
 import { styles } from "./EditorPage.styles";
 
@@ -333,6 +337,15 @@ export const EditorPage = () => {
     [project?.layers, selectedLayerId],
   );
 
+  const editHand = (layerId: string | undefined, label: string) => {
+    if (!layerId) {
+      Alert.alert(`${label} 없음`, `먼저 ${label} 이미지를 추가해 주세요.`);
+      return;
+    }
+    selectLayer(layerId);
+    setActiveTab("clock");
+  };
+
   if (loading) {
     return (
       <AppScreen>
@@ -391,6 +404,10 @@ export const EditorPage = () => {
         <View style={styles.headerButton}>
           <AppButton label="저장" onPress={() => void save()} />
         </View>
+      </View>
+
+      <View style={styles.widgetAction}>
+        <AddClockWidgetButton project={project} saveProject={save} />
       </View>
 
       <ClockCanvas
@@ -513,6 +530,33 @@ export const EditorPage = () => {
                         "minute-hand",
                         project.analogConfig?.minuteHandLayerId,
                       )
+                    }
+                    variant="secondary"
+                  />
+                </View>
+              </View>
+              <View style={styles.buttonRow}>
+                <View style={styles.rowItem}>
+                  <AppButton
+                    label="시침 레이어 편집"
+                    onPress={() =>
+                      editHand(project.analogConfig?.hourHandLayerId, "시침")
+                    }
+                    selected={
+                      selectedLayerId === project.analogConfig?.hourHandLayerId
+                    }
+                    variant="secondary"
+                  />
+                </View>
+                <View style={styles.rowItem}>
+                  <AppButton
+                    label="분침 레이어 편집"
+                    onPress={() =>
+                      editHand(project.analogConfig?.minuteHandLayerId, "분침")
+                    }
+                    selected={
+                      selectedLayerId ===
+                      project.analogConfig?.minuteHandLayerId
                     }
                     variant="secondary"
                   />
@@ -751,7 +795,6 @@ export const EditorPage = () => {
 
           {activeTab === "layers" ? (
             <>
-              <AppText variant="label">레이어</AppText>
               {project.type === "digital" ? (
                 <AppButton
                   label="디지털 시계"
@@ -760,120 +803,40 @@ export const EditorPage = () => {
                   variant="secondary"
                 />
               ) : null}
-              {[...project.layers]
-                .sort((a, b) => b.zIndex - a.zIndex)
-                .map((layer) => (
-                  <View key={layer.id} style={styles.layerCard}>
-                    <AppButton
-                      label={`${layer.name}${layer.locked ? " · 잠김" : ""}${
-                        layer.visible ? "" : " · 숨김"
-                      }`}
-                      onPress={() => selectLayer(layer.id)}
-                      selected={selectedLayerId === layer.id}
-                      variant="secondary"
-                    />
-                    <View style={styles.wrapRow}>
-                      <AppButton
-                        label={layer.visible ? "숨기기" : "보이기"}
-                        onPress={() =>
-                          changeProject((current) => ({
-                            ...current,
-                            layers: current.layers.map((item) =>
-                              item.id === layer.id
-                                ? { ...item, visible: !item.visible }
-                                : item,
-                            ),
-                          }))
-                        }
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label={layer.locked ? "잠금 해제" : "잠금"}
-                        onPress={() =>
-                          changeProject((current) => ({
-                            ...current,
-                            layers: current.layers.map((item) =>
-                              item.id === layer.id
-                                ? { ...item, locked: !item.locked }
-                                : item,
-                            ),
-                          }))
-                        }
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="앞으로"
-                        onPress={() =>
-                          changeProject((current) => ({
-                            ...current,
-                            layers: moveLayer(current.layers, layer.id, "up"),
-                          }))
-                        }
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="맨 앞"
-                        onPress={() =>
-                          changeProject((current) => ({
-                            ...current,
-                            layers: moveLayer(
-                              current.layers,
-                              layer.id,
-                              "front",
-                            ),
-                          }))
-                        }
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="뒤로"
-                        onPress={() =>
-                          changeProject((current) => ({
-                            ...current,
-                            layers: moveLayer(current.layers, layer.id, "down"),
-                          }))
-                        }
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="맨 뒤"
-                        onPress={() =>
-                          changeProject((current) => ({
-                            ...current,
-                            layers: moveLayer(current.layers, layer.id, "back"),
-                          }))
-                        }
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="영역 다시 선택"
-                        onPress={() => reeditLayer(layer)}
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="삭제"
-                        onPress={() =>
-                          Alert.alert(
-                            "레이어 삭제",
-                            `${layer.name}을 삭제할까요?`,
-                            [
-                              { text: "취소", style: "cancel" },
-                              {
-                                text: "삭제",
-                                style: "destructive",
-                                onPress: () => void removeLayer(layer),
-                              },
-                            ],
-                          )
-                        }
-                        variant="secondary"
-                      />
-                    </View>
-                  </View>
-                ))}
-              {project.layers.length === 0 ? (
-                <AppText tone="secondary">추가된 이미지가 없어요.</AppText>
-              ) : null}
+              <ClockLayerPanel
+                layers={project.layers}
+                onEditHand={(layer) => editHand(layer.id, layer.name)}
+                onMove={(layerId, direction) =>
+                  changeProject((current) => ({
+                    ...current,
+                    layers: moveLayer(current.layers, layerId, direction),
+                  }))
+                }
+                onReedit={reeditLayer}
+                onRemove={removeLayer}
+                onSelect={selectLayer}
+                onToggleLock={(layerId) =>
+                  changeProject((current) => ({
+                    ...current,
+                    layers: current.layers.map((layer) =>
+                      layer.id === layerId
+                        ? { ...layer, locked: !layer.locked }
+                        : layer,
+                    ),
+                  }))
+                }
+                onToggleVisibility={(layerId) =>
+                  changeProject((current) => ({
+                    ...current,
+                    layers: current.layers.map((layer) =>
+                      layer.id === layerId
+                        ? { ...layer, visible: !layer.visible }
+                        : layer,
+                    ),
+                  }))
+                }
+                selectedLayerId={selectedLayerId}
+              />
             </>
           ) : null}
 
