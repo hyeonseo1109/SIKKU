@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are intentionally mutated inside worklets. */
 import { useCallback, useMemo } from "react";
 import { Image } from "expo-image";
-import { StyleSheet, Text } from "react-native";
+import { Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -163,11 +163,13 @@ export const TransformableDigitalSlot = ({
         ]}
       >
         {imageUri ? (
-          <Image
-            contentFit="fill"
-            source={imageUri}
-            style={StyleSheet.absoluteFill}
-          />
+          <View pointerEvents="none" style={styles.digitalSlotContent}>
+            <Image
+              contentFit="fill"
+              source={imageUri}
+              style={styles.digitalSlotImage}
+            />
+          </View>
         ) : (
           <Text
             adjustsFontSizeToFit

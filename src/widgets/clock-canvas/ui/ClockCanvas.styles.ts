@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, spacing } from "@/shared/config/theme";
+import { colors, fontFamilies, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   stage: {
@@ -80,9 +80,21 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     position: "absolute",
   },
+  digitalSlotContent: {
+    bottom: 0,
+    left: 0,
+    overflow: "hidden",
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  digitalSlotImage: {
+    height: "100%",
+    width: "100%",
+  },
   digitalSlotFallback: {
     color: colors.textPrimary,
-    fontWeight: "700",
+    fontFamily: fontFamilies.bold,
     textAlign: "center",
   },
   digitalRow: {
@@ -91,15 +103,22 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  digitImage: {
+  digitFrame: {
+    alignItems: "center",
     flex: 1,
-    height: "80%",
+    height: "100%",
     minWidth: 12,
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  digitImage: {
+    height: "100%",
+    width: "100%",
   },
   digitFallback: {
     color: colors.textPrimary,
+    fontFamily: fontFamilies.bold,
     fontSize: 36,
-    fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
 });

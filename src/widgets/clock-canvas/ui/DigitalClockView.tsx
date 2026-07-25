@@ -33,18 +33,19 @@ const DigitalClockViewComponent = ({ config, date }: DigitalClockViewProps) => {
       {[...value].map((character, index) => {
         const digit = toDigitValue(character);
         const uri = digit ? config.digitImageMap[digit] : undefined;
-        return uri ? (
-          <Image
-            accessibilityLabel={`${digit ?? character} 숫자 이미지`}
-            contentFit="contain"
-            key={`${character}-${index}`}
-            source={uri}
-            style={styles.digitImage}
-          />
-        ) : (
-          <Text key={`${character}-${index}`} style={styles.digitFallback}>
-            {character}
-          </Text>
+        return (
+          <View key={`${character}-${index}`} style={styles.digitFrame}>
+            {uri ? (
+              <Image
+                accessibilityLabel={`${digit ?? character} 숫자 이미지`}
+                contentFit="fill"
+                source={uri}
+                style={styles.digitImage}
+              />
+            ) : (
+              <Text style={styles.digitFallback}>{character}</Text>
+            )}
+          </View>
         );
       })}
     </View>

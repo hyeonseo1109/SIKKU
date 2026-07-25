@@ -1,6 +1,12 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, shadows, spacing } from "@/shared/config/theme";
+import {
+  colors,
+  fontFamilies,
+  radius,
+  shadows,
+  spacing,
+} from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   header: {
@@ -31,6 +37,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: colors.surfaceMuted,
     color: colors.textPrimary,
+    fontFamily: fontFamilies.regular,
     fontSize: 16,
     paddingHorizontal: spacing.md,
   },
