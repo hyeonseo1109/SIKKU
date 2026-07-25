@@ -7,12 +7,26 @@ import { moveLayer, normalizeLayerOrder } from "@/entities/clock-layer";
 import {
   clockProjectRepository,
   projectAssetRepository,
+  resolveCanvasCornerRadius,
+  resolveCanvasShadow,
   useClockProjectStore,
 } from "@/entities/clock-project";
 import type {
   DigitValue,
   DigitalDisplayTransform,
+  DigitalSeparatorStyle,
+  DigitalSlotId,
 } from "@/entities/digital-clock";
+import {
+  DIGITAL_SLOT_IDS,
+  DIGITAL_SLOT_LABELS,
+  getDigitalSeparatorStyle,
+  resolveDigitalSlotTransforms,
+} from "@/entities/digital-clock";
+import {
+  isClockWidgetSupported,
+  updateClockWidgets,
+} from "@/features/apply-clock-widget";
 import { serializeWidgetConfig } from "@/features/export-widget-config";
 import { type EditorTab, useEditorUiStore } from "@/features/editor-session";
 import {
@@ -21,14 +35,20 @@ import {
   pickProjectImage,
   usePendingImageStore,
 } from "@/features/select-image";
+import { updateProjectPreview } from "@/features/update-project-preview";
 import { AppButton, AppScreen, AppText } from "@/shared/ui";
 import { AnalogAnchorEditor } from "@/widgets/analog-anchor-editor";
-import { ClockCanvas, DIGITAL_SELECTION_ID } from "@/widgets/clock-canvas";
+import {
+  ClockCanvas,
+  getDigitalSelectionId,
+  getSelectedDigitalSlotId,
+} from "@/widgets/clock-canvas";
 import { ClockLayerPanel } from "@/widgets/clock-layer-panel";
 import {
   AddClockWidgetButton,
   ClockWidgetSettings,
 } from "@/widgets/clock-widget-settings";
+import { DigitalSlotEditor } from "@/widgets/digital-slot-editor";
 
 import { styles } from "./EditorPage.styles";
 
@@ -60,6 +80,14 @@ const DIGITS: DigitValue[] = [
   "9",
   "colon",
 ];
+const SEPARATORS: { label: string; value: DigitalSeparatorStyle }[] = [
+  { label: ":", value: "colon" },
+  { label: "|", value: "pipe" },
+  { label: "작은 |", value: "small-pipe" },
+  { label: "-", value: "dash" },
+  { label: "공백", value: "space" },
+  { label: "없음", value: "none" },
+];
 
 const categoryForTarget = (target: ImageTarget) => {
   if (target.kind === "background") return "background" as const;
@@ -78,10 +106,14 @@ export const EditorPage = () => {
   const future = useClockProjectStore((state) => state.future);
   const setProject = useClockProjectStore((state) => state.setProject);
   const changeProject = useClockProjectStore((state) => state.changeProject);
+  const replaceProjectWithoutHistory = useClockProjectStore(
+    (state) => state.replaceProjectWithoutHistory,
+  );
   const save = useClockProjectStore((state) => state.save);
   const undo = useClockProjectStore((state) => state.undo);
   const redo = useClockProjectStore((state) => state.redo);
   const selectedLayerId = useEditorUiStore((state) => state.selectedLayerId);
+  const selectedDigitalSlotId = getSelectedDigitalSlotId(selectedLayerId);
   const activeTab = useEditorUiStore((state) => state.activeTab);
   const selectLayer = useEditorUiStore((state) => state.selectLayer);
   const setActiveTab = useEditorUiStore((state) => state.setActiveTab);
@@ -89,7 +121,60 @@ export const EditorPage = () => {
   const setPending = usePendingImageStore((state) => state.setPending);
   const [loading, setLoading] = useState(true);
   const [anchorDragging, setAnchorDragging] = useState(false);
+  const [capturingPreview, setCapturingPreview] = useState(false);
   const mountedProjectId = useRef<string | null>(null);
+  const canvasSnapshotRef = useRef<View>(null);
+  const saveInFlightRef = useRef<Promise<boolean> | null>(null);
+
+  const saveEditorProject = useCallback((): Promise<boolean> => {
+    if (saveInFlightRef.current) return saveInFlightRef.current;
+
+    const saveTask = (async () => {
+      let currentProject = useClockProjectStore.getState().project;
+      if (!currentProject) return false;
+
+      if (canvasSnapshotRef.current) {
+        setCapturingPreview(true);
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+        try {
+          const previewImageUri = await updateProjectPreview(
+            currentProject,
+            canvasSnapshotRef,
+          );
+          const latestProject = useClockProjectStore.getState().project;
+          currentProject = {
+            ...(latestProject?.id === currentProject.id
+              ? latestProject
+              : currentProject),
+            previewImageUri,
+          };
+          replaceProjectWithoutHistory(currentProject);
+        } catch (error: unknown) {
+          console.error("[EditorPage] Failed to update preview", error);
+        } finally {
+          setCapturingPreview(false);
+        }
+      }
+
+      const saved = await save();
+      const savedProject = useClockProjectStore.getState().project;
+      if (saved && savedProject && isClockWidgetSupported()) {
+        try {
+          await updateClockWidgets(savedProject);
+        } catch (error: unknown) {
+          console.error("[EditorPage] Failed to update widgets", error);
+        }
+      }
+      return saved;
+    })().finally(() => {
+      saveInFlightRef.current = null;
+    });
+
+    saveInFlightRef.current = saveTask;
+    return saveTask;
+  }, [replaceProjectWithoutHistory, save]);
 
   useEffect(() => {
     let active = true;
@@ -122,9 +207,9 @@ export const EditorPage = () => {
 
   useEffect(() => {
     if (saveStatus !== "dirty") return;
-    const timer = setTimeout(() => void save(), 750);
+    const timer = setTimeout(() => void saveEditorProject(), 750);
     return () => clearTimeout(timer);
-  }, [project?.updatedAt, save, saveStatus]);
+  }, [project?.updatedAt, saveEditorProject, saveStatus]);
 
   useEffect(
     () => () => {
@@ -133,7 +218,14 @@ export const EditorPage = () => {
         state.project?.id === mountedProjectId.current &&
         state.saveStatus === "dirty"
       ) {
-        void state.save();
+        const projectToSync = state.project;
+        void state.save().then((saved) => {
+          if (saved && isClockWidgetSupported()) {
+            return updateClockWidgets(projectToSync).catch((error: unknown) => {
+              console.error("[EditorPage] Failed to update widgets", error);
+            });
+          }
+        });
       }
       resetUi();
     },
@@ -367,13 +459,30 @@ export const EditorPage = () => {
     );
   }
 
-  const updateDigital = (transform: DigitalDisplayTransform) =>
+  const updateDigital = (
+    slotId: DigitalSlotId,
+    transform: DigitalDisplayTransform,
+  ) =>
     changeProject((current) => ({
       ...current,
       digitalConfig: current.digitalConfig
-        ? { ...current.digitalConfig, transform }
+        ? {
+            ...current.digitalConfig,
+            slotTransforms: {
+              ...current.digitalConfig.slotTransforms,
+              [slotId]: transform,
+            },
+          }
         : undefined,
     }));
+  const digitalSlotTransforms = project.digitalConfig
+    ? resolveDigitalSlotTransforms(project.digitalConfig, project.canvas)
+    : null;
+  const digitalSeparatorStyle = project.digitalConfig
+    ? getDigitalSeparatorStyle(project.digitalConfig)
+    : "colon";
+  const canvasCornerRadius = resolveCanvasCornerRadius(project.canvas);
+  const canvasShadow = resolveCanvasShadow(project.canvas);
 
   return (
     <AppScreen>
@@ -382,7 +491,7 @@ export const EditorPage = () => {
           <AppButton
             label="뒤로"
             onPress={() => {
-              void save().finally(() => router.back());
+              void saveEditorProject().finally(() => router.back());
             }}
             variant="secondary"
           />
@@ -402,12 +511,15 @@ export const EditorPage = () => {
           </AppText>
         </View>
         <View style={styles.headerButton}>
-          <AppButton label="저장" onPress={() => void save()} />
+          <AppButton label="저장" onPress={() => void saveEditorProject()} />
         </View>
       </View>
 
       <View style={styles.widgetAction}>
-        <AddClockWidgetButton project={project} saveProject={save} />
+        <AddClockWidgetButton
+          project={project}
+          saveProject={saveEditorProject}
+        />
       </View>
 
       <ClockCanvas
@@ -415,7 +527,8 @@ export const EditorPage = () => {
         onTransformDigital={updateDigital}
         onTransformLayer={updateLayerTransform}
         project={project}
-        selectedLayerId={selectedLayerId}
+        selectedLayerId={capturingPreview ? null : selectedLayerId}
+        snapshotRef={canvasSnapshotRef}
       />
 
       <View style={styles.toolbar}>
@@ -461,6 +574,141 @@ export const EditorPage = () => {
                   />
                 ))}
               </View>
+              <AppText variant="label">배경 박스 모양</AppText>
+              <View style={styles.wrapRow}>
+                <AppButton
+                  label={`모서리 − (${Math.round(canvasCornerRadius)})`}
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      canvas: {
+                        ...current.canvas,
+                        cornerRadius: Math.max(
+                          0,
+                          resolveCanvasCornerRadius(current.canvas) - 4,
+                        ),
+                      },
+                    }))
+                  }
+                  variant="secondary"
+                />
+                <AppButton
+                  label="모서리 +"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      canvas: {
+                        ...current.canvas,
+                        cornerRadius: Math.min(
+                          Math.min(
+                            current.canvas.width,
+                            current.canvas.height,
+                          ) / 2,
+                          resolveCanvasCornerRadius(current.canvas) + 4,
+                        ),
+                      },
+                    }))
+                  }
+                  variant="secondary"
+                />
+                <AppButton
+                  label={canvasShadow.enabled ? "그림자 끄기" : "그림자 켜기"}
+                  onPress={() =>
+                    changeProject((current) => {
+                      const shadow = resolveCanvasShadow(current.canvas);
+                      return {
+                        ...current,
+                        canvas: {
+                          ...current.canvas,
+                          shadow: { ...shadow, enabled: !shadow.enabled },
+                        },
+                      };
+                    })
+                  }
+                  selected={canvasShadow.enabled}
+                  variant="secondary"
+                />
+              </View>
+              {canvasShadow.enabled ? (
+                <View style={styles.wrapRow}>
+                  <AppButton
+                    label={`농도 − (${Math.round(canvasShadow.opacity * 100)}%)`}
+                    onPress={() =>
+                      changeProject((current) => {
+                        const shadow = resolveCanvasShadow(current.canvas);
+                        return {
+                          ...current,
+                          canvas: {
+                            ...current.canvas,
+                            shadow: {
+                              ...shadow,
+                              opacity: Math.max(0.04, shadow.opacity - 0.04),
+                            },
+                          },
+                        };
+                      })
+                    }
+                    variant="secondary"
+                  />
+                  <AppButton
+                    label="농도 +"
+                    onPress={() =>
+                      changeProject((current) => {
+                        const shadow = resolveCanvasShadow(current.canvas);
+                        return {
+                          ...current,
+                          canvas: {
+                            ...current.canvas,
+                            shadow: {
+                              ...shadow,
+                              opacity: Math.min(0.5, shadow.opacity + 0.04),
+                            },
+                          },
+                        };
+                      })
+                    }
+                    variant="secondary"
+                  />
+                  <AppButton
+                    label={`퍼짐 − (${Math.round(canvasShadow.blur)})`}
+                    onPress={() =>
+                      changeProject((current) => {
+                        const shadow = resolveCanvasShadow(current.canvas);
+                        return {
+                          ...current,
+                          canvas: {
+                            ...current.canvas,
+                            shadow: {
+                              ...shadow,
+                              blur: Math.max(0, shadow.blur - 3),
+                            },
+                          },
+                        };
+                      })
+                    }
+                    variant="secondary"
+                  />
+                  <AppButton
+                    label="퍼짐 +"
+                    onPress={() =>
+                      changeProject((current) => {
+                        const shadow = resolveCanvasShadow(current.canvas);
+                        return {
+                          ...current,
+                          canvas: {
+                            ...current.canvas,
+                            shadow: {
+                              ...shadow,
+                              blur: Math.min(48, shadow.blur + 3),
+                            },
+                          },
+                        };
+                      })
+                    }
+                    variant="secondary"
+                  />
+                </View>
+              ) : null}
               <AppButton
                 label="배경 이미지 선택"
                 onPress={() => void chooseImage({ kind: "background" })}
@@ -756,19 +1004,53 @@ export const EditorPage = () => {
                   }
                   variant="secondary"
                 />
+              </View>
+              <AppText variant="label">시간 구분자</AppText>
+              <View style={styles.wrapRow}>
+                {SEPARATORS.map((separator) => (
+                  <AppButton
+                    key={separator.value}
+                    label={separator.label}
+                    onPress={() =>
+                      changeProject((current) => ({
+                        ...current,
+                        digitalConfig: current.digitalConfig
+                          ? {
+                              ...current.digitalConfig,
+                              colonVisible: separator.value !== "none",
+                              separatorStyle: separator.value,
+                            }
+                          : undefined,
+                      }))
+                    }
+                    selected={digitalSeparatorStyle === separator.value}
+                    variant="secondary"
+                  />
+                ))}
+              </View>
+              <AppText variant="label">숫자 자리별 위치</AppText>
+              <AppText tone="secondary">
+                각 자리를 선택한 뒤 캔버스에서 따로 끌어서 배치할 수 있어요.
+              </AppText>
+              <View style={styles.wrapRow}>
+                {DIGITAL_SLOT_IDS.map((slotId) => (
+                  <AppButton
+                    key={slotId}
+                    label={DIGITAL_SLOT_LABELS[slotId]}
+                    onPress={() => selectLayer(getDigitalSelectionId(slotId))}
+                    selected={selectedDigitalSlotId === slotId}
+                    variant="secondary"
+                  />
+                ))}
                 <AppButton
-                  label={
-                    project.digitalConfig.colonVisible
-                      ? "콜론 숨기기"
-                      : "콜론 보이기"
-                  }
+                  label="자리 배치 초기화"
                   onPress={() =>
                     changeProject((current) => ({
                       ...current,
                       digitalConfig: current.digitalConfig
                         ? {
                             ...current.digitalConfig,
-                            colonVisible: !current.digitalConfig.colonVisible,
+                            slotTransforms: undefined,
                           }
                         : undefined,
                     }))
@@ -776,6 +1058,17 @@ export const EditorPage = () => {
                   variant="secondary"
                 />
               </View>
+              {selectedDigitalSlotId && digitalSlotTransforms ? (
+                <DigitalSlotEditor
+                  canvasHeight={project.canvas.height}
+                  canvasWidth={project.canvas.width}
+                  label={DIGITAL_SLOT_LABELS[selectedDigitalSlotId]}
+                  onChange={(transform) =>
+                    updateDigital(selectedDigitalSlotId, transform)
+                  }
+                  transform={digitalSlotTransforms[selectedDigitalSlotId]}
+                />
+              ) : null}
               <AppText variant="label">숫자 이미지</AppText>
               <View style={styles.wrapRow}>
                 {DIGITS.map((digit) => (
@@ -796,12 +1089,22 @@ export const EditorPage = () => {
           {activeTab === "layers" ? (
             <>
               {project.type === "digital" ? (
-                <AppButton
-                  label="디지털 시계"
-                  onPress={() => selectLayer(DIGITAL_SELECTION_ID)}
-                  selected={selectedLayerId === DIGITAL_SELECTION_ID}
-                  variant="secondary"
-                />
+                <>
+                  <AppText variant="label">디지털 숫자 자리</AppText>
+                  <View style={styles.wrapRow}>
+                    {DIGITAL_SLOT_IDS.map((slotId) => (
+                      <AppButton
+                        key={slotId}
+                        label={DIGITAL_SLOT_LABELS[slotId]}
+                        onPress={() =>
+                          selectLayer(getDigitalSelectionId(slotId))
+                        }
+                        selected={selectedDigitalSlotId === slotId}
+                        variant="secondary"
+                      />
+                    ))}
+                  </View>
+                </>
               ) : null}
               <ClockLayerPanel
                 layers={project.layers}
@@ -881,7 +1184,10 @@ export const EditorPage = () => {
                 }}
                 variant="secondary"
               />
-              <ClockWidgetSettings project={project} saveProject={save} />
+              <ClockWidgetSettings
+                project={project}
+                saveProject={saveEditorProject}
+              />
             </>
           ) : null}
         </ScrollView>

@@ -15,24 +15,27 @@ type DigitalClockViewProps = {
   date: Date;
 };
 
-const toDigitValue = (character: string): DigitValue =>
-  character === ":" ? "colon" : (character as DigitValue);
+const toDigitValue = (character: string): DigitValue | null => {
+  if (character === ":") return "colon";
+  return /^\d$/.test(character) ? (character as DigitValue) : null;
+};
 
 const DigitalClockViewComponent = ({ config, date }: DigitalClockViewProps) => {
   const value = formatTime({
     date,
     format: config.format,
     colonVisible: config.colonVisible,
+    separatorStyle: config.separatorStyle,
   });
 
   return (
     <View style={[styles.digitalRow, { gap: config.digitSpacing }]}>
       {[...value].map((character, index) => {
         const digit = toDigitValue(character);
-        const uri = config.digitImageMap[digit];
+        const uri = digit ? config.digitImageMap[digit] : undefined;
         return uri ? (
           <Image
-            accessibilityLabel={`${digit} 숫자 이미지`}
+            accessibilityLabel={`${digit ?? character} 숫자 이미지`}
             contentFit="contain"
             key={`${character}-${index}`}
             source={uri}

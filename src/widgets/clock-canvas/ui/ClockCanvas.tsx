@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import type { LayoutChangeEvent } from "react-native";
@@ -6,7 +7,15 @@ import { Pressable, View } from "react-native";
 import { getHourAngle, getMinuteAngle } from "@/entities/analog-clock";
 import type { ClockLayerTransform } from "@/entities/clock-layer";
 import type { ClockProject } from "@/entities/clock-project";
-import type { DigitalDisplayTransform } from "@/entities/digital-clock";
+import {
+  resolveCanvasCornerRadius,
+  resolveCanvasShadow,
+} from "@/entities/clock-project";
+import {
+  DIGITAL_SLOT_IDS,
+  type DigitalDisplayTransform,
+  type DigitalSlotId,
+} from "@/entities/digital-clock";
 import { useCurrentTime } from "@/shared/hooks";
 import { getCanvasScale, logicalToScreenPoint } from "@/shared/lib/geometry";
 
@@ -16,14 +25,31 @@ import { TransformableLayer } from "./TransformableLayer";
 
 const MAX_CANVAS_HEIGHT = 390;
 const CENTER_CAP_SIZE = 12;
-const DIGITAL_SELECTION_ID = "__digital__";
+const DIGITAL_SELECTION_PREFIX = "__digital_slot__:";
+
+const getDigitalSelectionId = (slotId: DigitalSlotId) =>
+  `${DIGITAL_SELECTION_PREFIX}${slotId}`;
+
+const getSelectedDigitalSlotId = (
+  selectedLayerId: string | null,
+): DigitalSlotId | null => {
+  if (!selectedLayerId?.startsWith(DIGITAL_SELECTION_PREFIX)) return null;
+  const slotId = selectedLayerId.slice(DIGITAL_SELECTION_PREFIX.length);
+  return DIGITAL_SLOT_IDS.includes(slotId as DigitalSlotId)
+    ? (slotId as DigitalSlotId)
+    : null;
+};
 
 export type ClockCanvasProps = {
   project: ClockProject;
   selectedLayerId: string | null;
   onSelectLayer: (layerId: string | null) => void;
   onTransformLayer: (layerId: string, transform: ClockLayerTransform) => void;
-  onTransformDigital: (transform: DigitalDisplayTransform) => void;
+  onTransformDigital: (
+    slotId: DigitalSlotId,
+    transform: DigitalDisplayTransform,
+  ) => void;
+  snapshotRef?: RefObject<View | null>;
 };
 
 export const ClockCanvas = ({
@@ -32,6 +58,7 @@ export const ClockCanvas = ({
   onTransformLayer,
   project,
   selectedLayerId,
+  snapshotRef,
 }: ClockCanvasProps) => {
   const [availableWidth, setAvailableWidth] = useState(0);
   const isCurrentTime = project.analogConfig?.previewMode !== "custom";
@@ -61,10 +88,22 @@ export const ClockCanvas = ({
   );
   const screenWidth = project.canvas.width * scale;
   const screenHeight = project.canvas.height * scale;
+  const cornerRadius = resolveCanvasCornerRadius(project.canvas) * scale;
+  const canvasShadow = resolveCanvasShadow(project.canvas);
+  const shadowEnabled = canvasShadow.enabled;
+  const shadowBlur = canvasShadow.blur * scale;
+  const shadowOffsetY = canvasShadow.offsetY * scale;
+  const shadowPadding = shadowEnabled
+    ? Math.ceil(shadowBlur + Math.abs(shadowOffsetY))
+    : 0;
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setAvailableWidth(event.nativeEvent.layout.width);
   }, []);
+  const handleDigitalSelect = useCallback(
+    (slotId: DigitalSlotId) => onSelectLayer(getDigitalSelectionId(slotId)),
+    [onSelectLayer],
+  );
 
   const hourAngle = getHourAngle(
     previewDate.getHours(),
@@ -75,6 +114,7 @@ export const ClockCanvas = ({
     previewDate.getMinutes(),
     previewDate.getSeconds(),
   );
+  const selectedDigitalSlotId = getSelectedDigitalSlotId(selectedLayerId);
   const analogCenter = project.analogConfig
     ? logicalToScreenPoint(
         {
@@ -89,100 +129,124 @@ export const ClockCanvas = ({
     <View onLayout={handleLayout} style={styles.stage}>
       {availableWidth > 0 ? (
         <View
-          style={[
-            styles.canvas,
-            {
-              width: screenWidth,
-              height: screenHeight,
-              backgroundColor: project.canvas.backgroundColor,
-            },
-          ]}
+          collapsable={false}
+          ref={snapshotRef}
+          style={[styles.captureFrame, { padding: shadowPadding }]}
         >
-          {project.canvas.backgroundImageUri ? (
-            <Image
-              contentFit="cover"
-              pointerEvents="none"
-              source={project.canvas.backgroundImageUri}
-              style={styles.backgroundImage}
-            />
-          ) : null}
-
-          <Pressable
-            accessibilityLabel="시계 캔버스"
-            onPress={() => onSelectLayer(null)}
-            style={styles.canvasDismissArea}
-          />
-
-          {project.layers
-            .filter((layer) => layer.visible)
-            .sort((a, b) => a.zIndex - b.zIndex)
-            .map((layer) => {
-              const isHand =
-                layer.type === "hour-hand" || layer.type === "minute-hand";
-              const renderedLayer =
-                isHand && project.analogConfig
-                  ? {
-                      ...layer,
-                      transform: {
-                        ...layer.transform,
-                        x: project.analogConfig.centerX,
-                        y: project.analogConfig.centerY,
-                      },
-                    }
-                  : layer;
-
-              return (
-                <TransformableLayer
-                  canvasHeight={project.canvas.height}
-                  canvasWidth={project.canvas.width}
-                  key={layer.id}
-                  layer={renderedLayer}
-                  onSelect={onSelectLayer}
-                  onTransformEnd={onTransformLayer}
-                  scale={scale}
-                  selected={selectedLayerId === layer.id}
-                  timeRotation={
-                    layer.type === "hour-hand"
-                      ? hourAngle
-                      : layer.type === "minute-hand"
-                        ? minuteAngle
-                        : 0
-                  }
-                />
-              );
-            })}
-
-          {project.type === "digital" && project.digitalConfig ? (
-            <TransformableDigitalClock
-              canvasHeight={project.canvas.height}
-              canvasWidth={project.canvas.width}
-              config={project.digitalConfig}
-              date={previewDate}
-              onSelect={() => onSelectLayer(DIGITAL_SELECTION_ID)}
-              onTransformEnd={onTransformDigital}
-              scale={scale}
-              selected={selectedLayerId === DIGITAL_SELECTION_ID}
-            />
-          ) : null}
-
-          {project.type === "analog" &&
-          project.analogConfig?.showCenterCap &&
-          analogCenter ? (
+          <View
+            style={[
+              styles.shadowFrame,
+              {
+                backgroundColor: project.canvas.backgroundColor,
+                borderRadius: cornerRadius,
+                elevation: shadowEnabled ? Math.max(1, shadowBlur / 3) : 0,
+                height: screenHeight,
+                shadowColor: canvasShadow.color,
+                shadowOffset: { width: 0, height: shadowOffsetY },
+                shadowOpacity: shadowEnabled ? canvasShadow.opacity : 0,
+                shadowRadius: shadowBlur,
+                width: screenWidth,
+              },
+            ]}
+          >
             <View
-              pointerEvents="none"
               style={[
-                styles.centerCap,
+                styles.canvas,
                 {
-                  left: analogCenter.x - CENTER_CAP_SIZE / 2,
-                  top: analogCenter.y - CENTER_CAP_SIZE / 2,
+                  width: screenWidth,
+                  height: screenHeight,
+                  borderRadius: cornerRadius,
+                  backgroundColor: project.canvas.backgroundColor,
                 },
               ]}
-            />
-          ) : null}
+            >
+              {project.canvas.backgroundImageUri ? (
+                <Image
+                  contentFit="cover"
+                  pointerEvents="none"
+                  source={project.canvas.backgroundImageUri}
+                  style={styles.backgroundImage}
+                />
+              ) : null}
+
+              <Pressable
+                accessibilityLabel="시계 캔버스"
+                onPress={() => onSelectLayer(null)}
+                style={styles.canvasDismissArea}
+              />
+
+              {project.layers
+                .filter((layer) => layer.visible)
+                .sort((a, b) => a.zIndex - b.zIndex)
+                .map((layer) => {
+                  const isHand =
+                    layer.type === "hour-hand" || layer.type === "minute-hand";
+                  const renderedLayer =
+                    isHand && project.analogConfig
+                      ? {
+                          ...layer,
+                          transform: {
+                            ...layer.transform,
+                            x: project.analogConfig.centerX,
+                            y: project.analogConfig.centerY,
+                          },
+                        }
+                      : layer;
+
+                  return (
+                    <TransformableLayer
+                      canvasHeight={project.canvas.height}
+                      canvasWidth={project.canvas.width}
+                      key={layer.id}
+                      layer={renderedLayer}
+                      onSelect={onSelectLayer}
+                      onTransformEnd={onTransformLayer}
+                      scale={scale}
+                      selected={selectedLayerId === layer.id}
+                      timeRotation={
+                        layer.type === "hour-hand"
+                          ? hourAngle
+                          : layer.type === "minute-hand"
+                            ? minuteAngle
+                            : 0
+                      }
+                    />
+                  );
+                })}
+
+              {project.type === "digital" && project.digitalConfig ? (
+                <TransformableDigitalClock
+                  canvasHeight={project.canvas.height}
+                  canvasWidth={project.canvas.width}
+                  config={project.digitalConfig}
+                  date={previewDate}
+                  onSelect={handleDigitalSelect}
+                  onTransformEnd={onTransformDigital}
+                  scale={scale}
+                  selectedSlotId={selectedDigitalSlotId}
+                />
+              ) : null}
+
+              {project.type === "analog" &&
+              project.analogConfig?.showCenterCap &&
+              analogCenter ? (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.centerCap,
+                    {
+                      left: analogCenter.x - CENTER_CAP_SIZE / 2,
+                      top: analogCenter.y - CENTER_CAP_SIZE / 2,
+                    },
+                  ]}
+                />
+              ) : null}
+            </View>
+          </View>
         </View>
       ) : null}
     </View>
   );
 };
 
-export { DIGITAL_SELECTION_ID };
+export { getDigitalSelectionId, getSelectedDigitalSlotId };

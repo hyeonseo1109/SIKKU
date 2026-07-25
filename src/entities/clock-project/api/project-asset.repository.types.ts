@@ -24,6 +24,11 @@ export type ProjectAssetRepository = {
     lassoRegions: NormalizedPoint[][],
     selectionMode?: ImageSelectionMode,
   ) => Promise<ImageAsset>;
+  savePreview: (
+    projectId: string,
+    pngBytes: Uint8Array,
+    previousUri?: string,
+  ) => Promise<string>;
   removeAsset: (projectId: string, asset: ImageAsset) => Promise<void>;
   removeAllProjectAssets: (projectId: string) => Promise<void>;
 };

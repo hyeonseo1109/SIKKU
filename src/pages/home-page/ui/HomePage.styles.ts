@@ -4,8 +4,8 @@ import { colors, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   header: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
   },
   titleRow: {
     flexDirection: "row",
@@ -15,12 +15,12 @@ export const styles = StyleSheet.create({
   badge: {
     borderRadius: radius.full,
     backgroundColor: colors.accent,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   badgeLabel: {
     color: colors.primary,
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   list: {
     flex: 1,
@@ -31,6 +31,6 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   error: {
-    color: "#B42318",
+    color: colors.danger,
   },
 });

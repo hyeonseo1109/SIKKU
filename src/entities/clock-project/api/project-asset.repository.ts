@@ -119,6 +119,27 @@ export const projectAssetRepository: ProjectAssetRepository = {
     }
   },
 
+  async savePreview(projectId, pngBytes, previousUri) {
+    ensureProjectDirectories(projectId);
+    const result = new File(
+      getProjectDirectory(projectId),
+      `preview-${Date.now()}.png`,
+    );
+
+    try {
+      result.create({ intermediates: true, overwrite: true });
+      result.write(pngBytes);
+      if (previousUri && previousUri !== result.uri) {
+        safeDelete(previousUri);
+      }
+      return result.uri;
+    } catch (error: unknown) {
+      console.error("[AssetRepository] Failed to save preview", error);
+      safeDelete(result.uri);
+      throw new Error("프로젝트 미리보기를 저장하지 못했어요.");
+    }
+  },
+
   async removeAsset(_projectId, asset) {
     safeDelete(asset.originalUri);
     if (asset.processedUri !== asset.originalUri) {

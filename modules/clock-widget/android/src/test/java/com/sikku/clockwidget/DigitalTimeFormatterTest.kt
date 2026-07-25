@@ -21,11 +21,29 @@ class DigitalTimeFormatterTest {
     )
   }
 
+  @Test
+  fun formatsSelectedSeparatorStyles() {
+    assertEquals(
+      "03|07",
+      DigitalTimeFormatter.format(config("HH:mm", separatorStyle = "pipe"), at(3, 7)),
+    )
+    assertEquals(
+      "03-07",
+      DigitalTimeFormatter.format(config("HH:mm", separatorStyle = "dash"), at(3, 7)),
+    )
+    assertEquals(
+      "03 07",
+      DigitalTimeFormatter.format(config("HH:mm", separatorStyle = "space"), at(3, 7)),
+    )
+  }
+
   private fun config(
     format: String,
     colonVisible: Boolean = true,
+    separatorStyle: String = "colon",
   ) = NativeDigitalConfig(
     format = format,
+    separatorStyle = separatorStyle,
     digitSpacing = 0f,
     colonVisible = colonVisible,
     digitImagePaths = emptyMap(),

@@ -11,9 +11,9 @@ export const styles = StyleSheet.create({
   },
   selectedCard: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    gap: spacing.sm,
-    padding: spacing.sm,
+    borderRadius: radius.lg,
+    gap: spacing.md,
+    padding: spacing.md,
   },
   actions: {
     flexDirection: "row",

@@ -7,12 +7,12 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: radius.lg,
     borderColor: colors.border,
-    borderWidth: 1,
+    borderWidth: 0,
     backgroundColor: colors.surface,
     ...shadows.card,
   },
   preview: {
-    height: 164,
+    height: 176,
     backgroundColor: colors.surfaceMuted,
   },
   previewImage: {
@@ -25,8 +25,8 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    gap: spacing.md,
-    padding: spacing.md,
+    gap: spacing.lg,
+    padding: spacing.lg,
   },
   meta: {
     gap: spacing.xs,

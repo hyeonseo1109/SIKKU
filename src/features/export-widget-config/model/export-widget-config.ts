@@ -2,7 +2,8 @@ import { File } from "expo-file-system";
 
 import type { ClockLayer } from "@/entities/clock-layer";
 import type { ClockProject } from "@/entities/clock-project";
-import type { DigitValue } from "@/entities/digital-clock";
+import type { DigitValue, DigitalSlotId } from "@/entities/digital-clock";
+import { resolveDigitalSlotTransforms } from "@/entities/digital-clock";
 
 export type WidgetLayerConfig = {
   id: string;
@@ -32,10 +33,17 @@ export type NativeWidgetConfig = {
   analog?: ClockProject["analogConfig"];
   digital?: {
     format: NonNullable<ClockProject["digitalConfig"]>["format"];
+    separatorStyle: NonNullable<
+      ClockProject["digitalConfig"]
+    >["separatorStyle"];
     digitSpacing: number;
     colonVisible: boolean;
     digitImagePaths: Partial<Record<DigitValue, string>>;
     transform: NonNullable<ClockProject["digitalConfig"]>["transform"];
+    slotTransforms: Record<
+      DigitalSlotId,
+      NonNullable<ClockProject["digitalConfig"]>["transform"]
+    >;
   };
 };
 
@@ -102,10 +110,15 @@ export const exportWidgetConfig = (
     digital: project.digitalConfig
       ? {
           format: project.digitalConfig.format,
+          separatorStyle: project.digitalConfig.separatorStyle ?? "colon",
           digitSpacing: project.digitalConfig.digitSpacing,
           colonVisible: project.digitalConfig.colonVisible,
           digitImagePaths,
           transform: project.digitalConfig.transform,
+          slotTransforms: resolveDigitalSlotTransforms(
+            project.digitalConfig,
+            project.canvas,
+          ),
         }
       : undefined,
   };

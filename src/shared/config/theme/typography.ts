@@ -1,21 +1,21 @@
 export const typography = {
   body: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 23,
   },
   label: {
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   title: {
-    fontSize: 32,
-    lineHeight: 40,
-    fontWeight: "700",
+    fontSize: 30,
+    lineHeight: 38,
+    fontWeight: "800",
   },
   heading: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: "700",
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: "800",
   },
 } as const;

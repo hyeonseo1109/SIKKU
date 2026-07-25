@@ -4,11 +4,14 @@ import { colors, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.lg,
     gap: spacing.sm,
+    padding: spacing.md,
   },
   previewFrame: {
     alignSelf: "center",
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,

@@ -5,6 +5,16 @@ data class NativeCanvasConfig(
   val height: Float,
   val backgroundColor: String,
   val backgroundImagePath: String?,
+  val cornerRadius: Float = 24f,
+  val shadow: NativeCanvasShadow = NativeCanvasShadow(),
+)
+
+data class NativeCanvasShadow(
+  val enabled: Boolean = false,
+  val color: String = "#214E49",
+  val opacity: Float = 0.18f,
+  val blur: Float = 18f,
+  val offsetY: Float = 8f,
 )
 
 data class NativeImageLayer(
@@ -40,10 +50,12 @@ data class NativeDigitalTransform(
 
 data class NativeDigitalConfig(
   val format: String,
+  val separatorStyle: String = "colon",
   val digitSpacing: Float,
   val colonVisible: Boolean,
   val digitImagePaths: Map<String, String>,
   val transform: NativeDigitalTransform,
+  val slotTransforms: Map<String, NativeDigitalTransform> = emptyMap(),
 )
 
 data class NativeWidgetConfig(

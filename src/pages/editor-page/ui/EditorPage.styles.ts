@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, spacing } from "@/shared/config/theme";
+import { colors, radius, shadows, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   centered: {
@@ -11,9 +11,12 @@ export const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
     flexDirection: "row",
     gap: spacing.sm,
-    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm,
+    padding: spacing.sm,
   },
   headerButton: {
     minWidth: 72,
@@ -23,16 +26,15 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   widgetAction: {
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   toolbar: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: radius.lg,
-    borderWidth: 1,
     flex: 1,
     minHeight: 230,
     overflow: "hidden",
+    ...shadows.card,
   },
   tabScroller: {
     flexGrow: 0,
@@ -40,11 +42,11 @@ export const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.sm,
+    padding: spacing.md,
   },
   panel: {
     gap: spacing.md,
-    padding: spacing.md,
+    padding: spacing.lg,
     paddingBottom: spacing.xl,
   },
   wrapRow: {

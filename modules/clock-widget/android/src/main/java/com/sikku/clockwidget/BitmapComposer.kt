@@ -3,6 +3,9 @@ package com.sikku.clockwidget
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import com.sikku.clockwidget.model.NativeCanvasConfig
@@ -22,20 +25,64 @@ class BitmapComposer(
     config: NativeCanvasConfig,
     viewport: WidgetViewport,
   ) {
-    val destination = RectF(
-      viewport.left,
-      viewport.top,
-      viewport.left + viewport.width,
-      viewport.top + viewport.height,
-    )
+    val destination = canvasBounds(viewport)
+    val cornerRadius = config.cornerRadius * viewport.width / config.width
     val color = WidgetColorParser.parse(config.backgroundColor)
     if (color != android.graphics.Color.TRANSPARENT) {
-      canvas.drawRect(destination, Paint().apply { this.color = color })
+      val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = color
+        if (config.shadow.enabled) {
+          val shadowColor = WidgetColorParser.parse(config.shadow.color)
+          val alpha = (config.shadow.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
+          setShadowLayer(
+            config.shadow.blur * viewport.width / config.width,
+            0f,
+            config.shadow.offsetY * viewport.width / config.width,
+            (shadowColor and 0x00FFFFFF) or (alpha shl 24),
+          )
+        }
+      }
+      canvas.drawRoundRect(destination, cornerRadius, cornerRadius, paint)
+    } else if (config.shadow.enabled) {
+      val scale = viewport.width / config.width
+      val shadowColor = WidgetColorParser.parse(config.shadow.color)
+      val alpha = (config.shadow.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
+      val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = android.graphics.Color.WHITE
+        setShadowLayer(
+          config.shadow.blur * scale,
+          0f,
+          config.shadow.offsetY * scale,
+          (shadowColor and 0x00FFFFFF) or (alpha shl 24),
+        )
+      }
+      canvas.drawRoundRect(destination, cornerRadius, cornerRadius, shadowPaint)
+      canvas.drawRoundRect(
+        destination,
+        cornerRadius,
+        cornerRadius,
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+          xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+        },
+      )
     }
     val path = config.backgroundImagePath ?: return
     val bitmap = bitmapLoader.load(path, viewport.width.roundToInt(), viewport.height.roundToInt())
       ?: return
+    val checkpoint = canvas.save()
+    canvas.clipPath(canvasPath(config, viewport))
     canvas.drawBitmap(bitmap, centerCropSource(bitmap, destination), destination, IMAGE_PAINT)
+    canvas.restoreToCount(checkpoint)
+  }
+
+  fun clipToCanvas(
+    canvas: Canvas,
+    config: NativeCanvasConfig,
+    viewport: WidgetViewport,
+  ): Int {
+    val checkpoint = canvas.save()
+    canvas.clipPath(canvasPath(config, viewport))
+    return checkpoint
   }
 
   fun drawLayer(
@@ -114,5 +161,25 @@ class BitmapComposer(
         Rect(0, top, bitmap.width, top + cropHeight)
       }
     }
+  }
+
+  private fun canvasBounds(viewport: WidgetViewport) = RectF(
+    viewport.left,
+    viewport.top,
+    viewport.left + viewport.width,
+    viewport.top + viewport.height,
+  )
+
+  private fun canvasPath(
+    config: NativeCanvasConfig,
+    viewport: WidgetViewport,
+  ) = Path().apply {
+    val cornerRadius = config.cornerRadius * viewport.width / config.width
+    addRoundRect(
+      canvasBounds(viewport),
+      cornerRadius,
+      cornerRadius,
+      Path.Direction.CW,
+    )
   }
 }

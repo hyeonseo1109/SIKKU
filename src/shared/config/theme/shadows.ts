@@ -4,13 +4,13 @@ export const shadows = {
   card:
     Platform.select({
       ios: {
-        shadowColor: "#2C211D",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 14,
+        shadowColor: "#214E49",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 18,
       },
       android: {
-        elevation: 4,
+        elevation: 3,
       },
       default: {},
     }) ?? {},

@@ -1,2 +1,6 @@
-export { ClockCanvas, DIGITAL_SELECTION_ID } from "./ui/ClockCanvas";
+export {
+  ClockCanvas,
+  getDigitalSelectionId,
+  getSelectedDigitalSlotId,
+} from "./ui/ClockCanvas";
 export type { ClockCanvasProps } from "./ui/ClockCanvas";

@@ -4,7 +4,7 @@ import { spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   list: {
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingBottom: spacing.xl,
   },
   empty: {

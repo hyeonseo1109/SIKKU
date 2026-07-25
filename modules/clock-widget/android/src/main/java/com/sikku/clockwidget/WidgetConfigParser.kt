@@ -2,6 +2,7 @@ package com.sikku.clockwidget
 
 import com.sikku.clockwidget.model.NativeAnalogConfig
 import com.sikku.clockwidget.model.NativeCanvasConfig
+import com.sikku.clockwidget.model.NativeCanvasShadow
 import com.sikku.clockwidget.model.NativeDigitalConfig
 import com.sikku.clockwidget.model.NativeDigitalTransform
 import com.sikku.clockwidget.model.NativeImageLayer
@@ -23,11 +24,26 @@ class WidgetConfigParser(
       "지원하지 않는 시계 유형입니다."
     }
     val canvasJson = root.getJSONObject("canvas")
+    val shadowJson = canvasJson.optJSONObject("shadow")
     val canvas = NativeCanvasConfig(
       width = canvasJson.requirePositiveFloat("width"),
       height = canvasJson.requirePositiveFloat("height"),
       backgroundColor = canvasJson.optString("backgroundColor", "transparent"),
       backgroundImagePath = canvasJson.optionalFilePath("backgroundImageUri"),
+      cornerRadius = canvasJson.optDouble("cornerRadius", 24.0)
+        .toFloat()
+        .coerceAtLeast(0f),
+      shadow = NativeCanvasShadow(
+        enabled = shadowJson?.optBoolean("enabled", false) ?: false,
+        color = shadowJson?.optString("color", "#214E49") ?: "#214E49",
+        opacity = shadowJson?.optDouble("opacity", 0.18)
+          ?.toFloat()
+          ?.coerceIn(0f, 1f) ?: 0.18f,
+        blur = shadowJson?.optDouble("blur", 18.0)
+          ?.toFloat()
+          ?.coerceAtLeast(0f) ?: 18f,
+        offsetY = shadowJson?.optDouble("offsetY", 8.0)?.toFloat() ?: 8f,
+      ),
     )
     val layerJson = root.optJSONArray("layers")
     val layers = buildList {
@@ -87,20 +103,30 @@ class WidgetConfigParser(
       }
     }
     val transformJson = json.getJSONObject("transform")
+    val slotTransformsJson = json.optJSONObject("slotTransforms")
+    val slotTransforms = buildMap {
+      slotTransformsJson?.keys()?.forEach { key ->
+        put(key, parseDigitalTransform(slotTransformsJson.getJSONObject(key)))
+      }
+    }
     return NativeDigitalConfig(
       format = json.optString("format", "HH:mm"),
+      separatorStyle = json.optString("separatorStyle", "colon"),
       digitSpacing = json.requireFiniteFloat("digitSpacing"),
       colonVisible = json.optBoolean("colonVisible", true),
       digitImagePaths = paths,
-      transform = NativeDigitalTransform(
-        x = transformJson.requireFiniteFloat("x"),
-        y = transformJson.requireFiniteFloat("y"),
-        width = transformJson.requirePositiveFloat("width"),
-        height = transformJson.requirePositiveFloat("height"),
-        rotation = transformJson.requireFiniteFloat("rotation"),
-      ),
+      transform = parseDigitalTransform(transformJson),
+      slotTransforms = slotTransforms,
     )
   }
+
+  private fun parseDigitalTransform(json: JSONObject) = NativeDigitalTransform(
+    x = json.requireFiniteFloat("x"),
+    y = json.requireFiniteFloat("y"),
+    width = json.requirePositiveFloat("width"),
+    height = json.requirePositiveFloat("height"),
+    rotation = json.requireFiniteFloat("rotation"),
+  )
 
   private fun JSONObject.optionalFilePath(key: String): String? {
     val value = optString(key).takeIf { it.isNotBlank() } ?: return null

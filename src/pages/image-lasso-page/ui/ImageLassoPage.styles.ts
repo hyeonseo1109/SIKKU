@@ -1,11 +1,14 @@
 import { StyleSheet } from "react-native";
 
-import { spacing } from "@/shared/config/theme";
+import { colors, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   header: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
     gap: spacing.xs,
     marginBottom: spacing.md,
+    padding: spacing.md,
   },
   editor: {
     flex: 1,

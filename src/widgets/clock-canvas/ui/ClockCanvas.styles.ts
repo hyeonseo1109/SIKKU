@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, shadows, spacing } from "@/shared/config/theme";
+import { colors, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   stage: {
@@ -9,13 +9,17 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: spacing.sm,
   },
+  captureFrame: {
+    backgroundColor: colors.transparent,
+  },
+  shadowFrame: {
+    position: "relative",
+  },
   canvas: {
     overflow: "hidden",
     position: "relative",
-    borderRadius: radius.md,
     borderColor: colors.border,
     borderWidth: 1,
-    ...shadows.card,
   },
   backgroundImage: {
     position: "absolute",
@@ -70,6 +74,16 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: radius.sm,
     backgroundColor: "rgba(255,255,255,0.16)",
+  },
+  digitalSlot: {
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+  },
+  digitalSlotFallback: {
+    color: colors.textPrimary,
+    fontWeight: "700",
+    textAlign: "center",
   },
   digitalRow: {
     flex: 1,

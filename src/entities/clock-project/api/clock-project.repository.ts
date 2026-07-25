@@ -153,6 +153,7 @@ const duplicateData = (
     name: `${source.name} 복사본`,
     canvas: {
       ...source.canvas,
+      shadow: source.canvas.shadow ? { ...source.canvas.shadow } : undefined,
       backgroundImageUri: replaceProjectUri(
         source.canvas.backgroundImageUri,
         sourceRoot,
@@ -182,6 +183,16 @@ const duplicateData = (
             digitImageMap,
             digitAssetMap,
             transform: { ...source.digitalConfig.transform },
+            slotTransforms: source.digitalConfig.slotTransforms
+              ? Object.fromEntries(
+                  Object.entries(source.digitalConfig.slotTransforms).map(
+                    ([slotId, transform]) => [
+                      slotId,
+                      transform ? { ...transform } : transform,
+                    ],
+                  ),
+                )
+              : undefined,
           }
         : undefined,
     previewImageUri: replaceProjectUri(

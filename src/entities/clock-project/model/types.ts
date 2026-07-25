@@ -8,6 +8,14 @@ export const CLOCK_PROJECT_SCHEMA_VERSION = 1;
 export type ClockType = "analog" | "digital";
 export type CanvasPreset = "square" | "landscape" | "portrait";
 
+export type ClockCanvasShadow = {
+  enabled: boolean;
+  color: string;
+  opacity: number;
+  blur: number;
+  offsetY: number;
+};
+
 export type ClockCanvas = {
   preset: CanvasPreset;
   width: number;
@@ -15,6 +23,8 @@ export type ClockCanvas = {
   backgroundColor: string;
   backgroundImageUri?: string;
   backgroundImageAssetId?: string;
+  cornerRadius?: number;
+  shadow?: ClockCanvasShadow;
 };
 
 export type ClockProject = {

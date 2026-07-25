@@ -5,6 +5,7 @@ import { colors, typography } from "@/shared/config/theme";
 export const styles = StyleSheet.create({
   base: {
     color: colors.textPrimary,
+    letterSpacing: -0.15,
   },
   body: typography.body,
   label: typography.label,

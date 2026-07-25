@@ -3,6 +3,12 @@ export type DigitValue =
 
 export type DigitalClockFormat = "HH:mm" | "h:mm";
 
+export type DigitalSeparatorStyle =
+  "colon" | "pipe" | "small-pipe" | "dash" | "space" | "none";
+
+export type DigitalSlotId =
+  "hour-tens" | "hour-ones" | "colon" | "minute-tens" | "minute-ones";
+
 export type DigitalDisplayTransform = {
   x: number;
   y: number;
@@ -13,9 +19,11 @@ export type DigitalDisplayTransform = {
 
 export type DigitalClockConfig = {
   format: DigitalClockFormat;
+  separatorStyle?: DigitalSeparatorStyle;
   digitSpacing: number;
   colonVisible: boolean;
   digitImageMap: Partial<Record<DigitValue, string>>;
   digitAssetMap: Partial<Record<DigitValue, string>>;
   transform: DigitalDisplayTransform;
+  slotTransforms?: Partial<Record<DigitalSlotId, DigitalDisplayTransform>>;
 };

@@ -7,8 +7,8 @@ export const styles = StyleSheet.create({
     flex: 1,
     minHeight: 360,
     overflow: "hidden",
-    borderRadius: radius.md,
-    backgroundColor: colors.textPrimary,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primaryPressed,
   },
   canvas: {
     flex: 1,

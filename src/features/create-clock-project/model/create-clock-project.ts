@@ -32,6 +32,14 @@ export const buildClockProject = ({
       width,
       height,
       backgroundColor: "#FFFFFF",
+      cornerRadius: 24,
+      shadow: {
+        enabled: true,
+        color: "#214E49",
+        opacity: 0.18,
+        blur: 18,
+        offsetY: 8,
+      },
     },
     layers: [],
     assets: [],
@@ -50,6 +58,7 @@ export const buildClockProject = ({
       type === "digital"
         ? {
             format: "HH:mm",
+            separatorStyle: "colon",
             digitSpacing: 8,
             colonVisible: true,
             digitImageMap: {},

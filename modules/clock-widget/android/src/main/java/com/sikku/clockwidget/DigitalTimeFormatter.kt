@@ -16,7 +16,17 @@ object DigitalTimeFormatter {
     } else {
       String.format(Locale.US, "%02d", hour)
     }
-    val colon = if (config.colonVisible) ":" else ""
-    return "$hourText$colon${String.format(Locale.US, "%02d", calendar.get(Calendar.MINUTE))}"
+    val separator = if (config.colonVisible) {
+      when (config.separatorStyle) {
+        "pipe", "small-pipe" -> "|"
+        "dash" -> "-"
+        "space" -> " "
+        "none" -> ""
+        else -> ":"
+      }
+    } else {
+      ""
+    }
+    return "$hourText$separator${String.format(Locale.US, "%02d", calendar.get(Calendar.MINUTE))}"
   }
 }
