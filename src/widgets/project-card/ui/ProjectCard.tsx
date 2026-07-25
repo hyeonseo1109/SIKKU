@@ -7,6 +7,8 @@ import { AppButton, AppText } from "@/shared/ui";
 import { styles } from "./ProjectCard.styles";
 
 export type ProjectCardProps = {
+  duplicateLabel?: string;
+  isDuplicating?: boolean;
   project: ProjectIndexItem;
   onOpen: (projectId: string) => void;
   onDuplicate: (projectId: string) => void;
@@ -26,6 +28,8 @@ const formatUpdatedAt = (value: string) => {
 };
 
 export const ProjectCard = ({
+  duplicateLabel = "복제",
+  isDuplicating = false,
   onDelete,
   onDuplicate,
   onOpen,
@@ -73,7 +77,8 @@ export const ProjectCard = ({
             </View>
             <View style={styles.action}>
               <AppButton
-                label="복제"
+                disabled={isDuplicating}
+                label={duplicateLabel}
                 onPress={() => onDuplicate(project.id)}
                 variant="secondary"
               />

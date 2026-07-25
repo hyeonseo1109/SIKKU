@@ -1,4 +1,5 @@
+import { randomUUID } from "expo-crypto";
+
 export const createId = (prefix: string): string => {
-  const random = Math.random().toString(36).slice(2, 10);
-  return `${prefix}-${Date.now().toString(36)}-${random}`;
+  return `${prefix}-${randomUUID()}`;
 };

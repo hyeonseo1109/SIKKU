@@ -1,10 +1,13 @@
 import * as ImagePicker from "expo-image-picker";
+import { File } from "expo-file-system";
 
 import {
   projectAssetRepository,
   type ClockProject,
 } from "@/entities/clock-project";
 import type { ProjectAssetCategory } from "@/entities/image-asset";
+
+import { normalizePickedImage } from "../lib/normalize-picked-image";
 
 export type PickProjectImageResult =
   | { status: "canceled" }
@@ -33,15 +36,27 @@ export const pickProjectImage = async (
     return { status: "canceled" };
   }
 
-  const asset = await projectAssetRepository.importImage({
-    projectId: project.id,
-    sourceUri: selected.uri,
-    category,
+  const normalized = await normalizePickedImage({
+    uri: selected.uri,
     width: selected.width || 1,
     height: selected.height || 1,
-    fileName: selected.fileName,
     mimeType: selected.mimeType,
   });
+  let asset;
+  try {
+    asset = await projectAssetRepository.importImage({
+      projectId: project.id,
+      sourceUri: normalized.uri,
+      category,
+      width: normalized.width || 1,
+      height: normalized.height || 1,
+      fileName: null,
+      mimeType: selected.mimeType,
+    });
+  } finally {
+    const normalizedFile = new File(normalized.uri);
+    if (normalizedFile.exists) normalizedFile.delete();
+  }
 
   return { status: "selected", asset };
 };

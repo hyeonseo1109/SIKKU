@@ -26,6 +26,11 @@ lerna-debug.log*
 .env.*
 !.env.example
 *.local
+credentials.json
+*.jks
+*.keystore
+artifacts/*.aab
+!android/app/debug.keystore
 
 # editor and OS files
 .vscode/*

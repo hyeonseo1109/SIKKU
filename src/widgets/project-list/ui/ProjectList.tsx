@@ -1,6 +1,9 @@
 import { FlatList, View } from "react-native";
 
-import type { ProjectIndexItem } from "@/entities/clock-project";
+import type {
+  DuplicateProjectStatus,
+  ProjectIndexItem,
+} from "@/entities/clock-project";
 import { AppText } from "@/shared/ui";
 import { ProjectCard } from "@/widgets/project-card";
 
@@ -8,12 +11,14 @@ import { styles } from "./ProjectList.styles";
 
 export type ProjectListProps = {
   projects: ProjectIndexItem[];
+  duplicateStatuses: Record<string, DuplicateProjectStatus>;
   onOpen: (projectId: string) => void;
   onDuplicate: (projectId: string) => void;
   onDelete: (projectId: string) => void;
 };
 
 export const ProjectList = ({
+  duplicateStatuses,
   onDelete,
   onDuplicate,
   onOpen,
@@ -37,6 +42,8 @@ export const ProjectList = ({
       keyExtractor={(project) => project.id}
       renderItem={({ item }) => (
         <ProjectCard
+          duplicateLabel={duplicateStatuses[item.id] ? "복사 중…" : "복제"}
+          isDuplicating={Boolean(duplicateStatuses[item.id])}
           onDelete={onDelete}
           onDuplicate={onDuplicate}
           onOpen={onOpen}

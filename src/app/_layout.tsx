@@ -4,7 +4,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet } from "react-native";
 
-import { AppDialogProvider } from "@/shared/ui";
+import { AppDialogProvider, AppErrorBoundary } from "@/shared/ui";
 
 const stackScreenOptions = {
   headerShown: false,
@@ -19,10 +19,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <AppDialogProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={stackScreenOptions} />
-      </AppDialogProvider>
+      <AppErrorBoundary>
+        <AppDialogProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={stackScreenOptions} />
+        </AppDialogProvider>
+      </AppErrorBoundary>
     </GestureHandlerRootView>
   );
 }

@@ -19,6 +19,9 @@ export const HomePage = () => {
   const projects = useProjectListStore((state) => state.projects);
   const loading = useProjectListStore((state) => state.loading);
   const error = useProjectListStore((state) => state.error);
+  const duplicateStatuses = useProjectListStore(
+    (state) => state.duplicateStatuses,
+  );
   const load = useProjectListStore((state) => state.load);
   const duplicate = useProjectListStore((state) => state.duplicate);
   const remove = useProjectListStore((state) => state.remove);
@@ -83,6 +86,16 @@ export const HomePage = () => {
     }
   };
 
+  const handleDuplicate = async (projectId: string) => {
+    const succeeded = await duplicate(projectId);
+    if (succeeded) {
+      showDialog({
+        title: "복사 완료",
+        message: "시계 복사본을 만들었어요.",
+      });
+    }
+  };
+
   return (
     <AppScreen>
       <View style={styles.header}>
@@ -111,8 +124,9 @@ export const HomePage = () => {
           </View>
         ) : (
           <ProjectList
+            duplicateStatuses={duplicateStatuses}
             onDelete={(projectId) => void handleDelete(projectId)}
-            onDuplicate={(projectId) => void duplicate(projectId)}
+            onDuplicate={(projectId) => void handleDuplicate(projectId)}
             onOpen={(projectId) =>
               router.push({
                 pathname: "/editor/[projectId]",

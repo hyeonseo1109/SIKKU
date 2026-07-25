@@ -78,9 +78,16 @@ export const migrateClockProject = (value: unknown): ClockProject => {
     throw new Error("Unsupported future clock project schema");
   }
 
-  if (value.schemaVersion === CLOCK_PROJECT_SCHEMA_VERSION) {
-    return alignAnalogHandsToCenter(value);
+  let project = value;
+  while (project.schemaVersion < CLOCK_PROJECT_SCHEMA_VERSION) {
+    if (project.schemaVersion === 0) {
+      project = { ...project, schemaVersion: 1 };
+      continue;
+    }
+    throw new Error(
+      `Unsupported clock project schema: ${project.schemaVersion}`,
+    );
   }
 
-  throw new Error(`Unsupported clock project schema: ${value.schemaVersion}`);
+  return alignAnalogHandsToCenter(project);
 };

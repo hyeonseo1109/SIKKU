@@ -2,11 +2,14 @@ export { useClockProjectStore } from "./model/store";
 export { clockProjectRepository, projectAssetRepository } from "./api";
 export type {
   ClockProjectRepository,
+  DuplicateClockProjectResult,
+  DuplicateProjectStatus,
   ImportImageParams,
   ProjectAssetRepository,
 } from "./api";
 export { canvasPresets } from "./config/canvas-presets";
 export { migrateClockProject } from "./lib/migrations";
+export { validateClockProject } from "./lib/validation";
 export {
   DEFAULT_CANVAS_CORNER_RADIUS,
   DEFAULT_CANVAS_SHADOW,

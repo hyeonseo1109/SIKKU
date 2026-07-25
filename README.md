@@ -127,8 +127,7 @@ Expo Go에서는 위젯 영역이 Development Build가 필요하다는 안내를
 - pan/pinch/rotation 동시 제스처, 레이어 잠금·숨김·삭제·순서 변경
 - 시침·분침의 중심축·방향 꼭짓점 드래그, 중심 고정 비율 크기 조절
 - 숫자 0–9 및 콜론 이미지, fallback 문자, 12/24시간, 간격과 표시 변형
-- 최대 30단계 undo/redo, 750ms 자동 저장, 명시적 저장
-- 숨김 레이어를 제외하고 파일을 검증하는 Kotlin 전달 JSON 생성
+- 최대 30단계 undo/redo, 편집 중단 2초 뒤 자동 저장, 명시적 저장
 
 ## 데이터와 파일 저장
 
@@ -141,15 +140,20 @@ documentDirectory/
 └── projects/
     └── {projectId}/
         ├── project.json
+        ├── project.json.backup
         └── assets/
             ├── originals/
             └── processed/
 ```
 
-Image Picker의 임시 URI는 저장하지 않습니다. 선택 즉시
-`originals/`로 복사하며, 올가미 결과는 원본을 덮어쓰지 않고
-`processed/lasso-*.png`로 저장합니다. 복제 시 프로젝트 디렉터리와
-asset/layer ID를 모두 새로 만들고 모든 URI를 복제본 경로로 치환합니다.
+Image Picker의 임시 URI는 저장하지 않습니다. 선택 이미지는 방향을
+정규화하고 긴 변을 최대 4096px로 제한한 뒤 `originals/`로 복사합니다.
+올가미 결과는 원본을 덮어쓰지 않고 `processed/lasso-*.png`로
+저장합니다. 저장은 임시 JSON을 기록·검증한 뒤 기존 파일의 backup을
+만들고 원자적으로 교체합니다. 시작 시 인덱스와 실제 폴더를 조정하고
+중단된 복사 임시 폴더를 정리합니다. 복제 시 참조된 파일,
+project/asset/layer UUID와 파일명을 모두 새로 만들며 검증 후 임시
+폴더를 최종 위치로 이동합니다.
 
 프로젝트 `schemaVersion`은 현재 1이며 읽기 시 migration 진입점과
 런타임 검증을 거칩니다. 손상된 프로젝트 하나는 목록 로딩에서
@@ -232,11 +236,37 @@ transform을 적용하며 누락된 숫자는 시스템 글꼴로 표시합니�
 
 리사이즈 시 `onAppWidgetOptionsChanged`에서 새 Bitmap을 만들며 단순
 확대하지 않습니다. 시간은 모든 인스턴스가 공유하는 한 개의 one-shot
-AlarmManager 예약으로 다음 분 경계마다 갱신하고 실행 후 다음 예약을
-만듭니다. Android 12 이상에서 정확한 알람 권한이 허용되지 않으면
-`setAndAllowWhileIdle`로 자동 대체되므로 절전 상태에서는 갱신이 다소
-늦을 수 있습니다. 재부팅, 앱 교체, 시스템 시간·시간대 변경 시 저장된
+AlarmManager의 `setAndAllowWhileIdle` 예약으로 다음 분 경계 부근에
+갱신하고 실행 후 다음 예약을 만듭니다. 정확한 알람 권한은 요청하지
+않으므로 절전 상태에서는 갱신이 다소 늦을 수 있습니다. 재부팅, 앱
+교체, 시스템 시간·시간대 변경 시 저장된
 설정을 다시 렌더링하고 예약을 복원합니다.
 
 현재 네이티브 위젯은 Android 전용이며 iOS WidgetKit은 범위에 포함하지
 않습니다.
+
+## Android release
+
+앱 버전은 `app.json`의 `version`, Android 빌드 번호는
+`android.versionCode`로 관리합니다. production EAS 빌드는 remote
+version source와 `autoIncrement`를 사용하므로 Play 업로드마다
+versionCode가 증가합니다. 버그 수정은 1.0.1, 기능 추가는 1.1.0, 큰
+호환성 변경은 2.0.0처럼 올립니다.
+
+```bash
+eas credentials -p android
+eas build -p android --profile preview
+eas build -p android --profile production
+```
+
+EAS remote credentials와 Google Play App Signing 사용을 권장합니다.
+업로드 keystore와 비밀번호는 저장소에 넣지 말고 암호 관리자와 별도
+오프라인 위치에 백업합니다. 로컬 Gradle release 서명이 필요하면
+`SIKKU_UPLOAD_STORE_FILE`, `SIKKU_UPLOAD_STORE_PASSWORD`,
+`SIKKU_UPLOAD_KEY_ALIAS`, `SIKKU_UPLOAD_KEY_PASSWORD`를 환경 또는
+개인 Gradle properties로 제공합니다. 값이 없을 때 로컬 release는
+서명되지 않으며 debug key로 위장 서명하지 않습니다.
+
+Play 제출 준비 자료는 `docs/play-store`에 있습니다. 최종 아이콘과
+splash, 공개 개인정보처리방침 URL, 폰트 라이선스 근거는 운영자가
+제공해야 합니다.

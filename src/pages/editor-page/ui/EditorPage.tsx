@@ -28,7 +28,6 @@ import {
   isClockWidgetSupported,
   updateClockWidgets,
 } from "@/features/apply-clock-widget";
-import { serializeWidgetConfig } from "@/features/export-widget-config";
 import { type EditorTab, useEditorUiStore } from "@/features/editor-session";
 import {
   applyImageAsset,
@@ -1253,27 +1252,6 @@ export const EditorPage = () => {
                   />
                 </View>
               </View>
-              <AppButton
-                label="Kotlin 전달 설정 검증"
-                onPress={() => {
-                  try {
-                    const json = serializeWidgetConfig(project);
-                    showDialog({
-                      title: "설정 검증 완료",
-                      message: `네이티브에 전달할 JSON ${json.length.toLocaleString()}자를 만들었어요.`,
-                    });
-                  } catch (error: unknown) {
-                    showDialog({
-                      title: "설정 검증 실패",
-                      message:
-                        error instanceof Error
-                          ? error.message
-                          : "파일을 확인해 주세요.",
-                    });
-                  }
-                }}
-                variant="secondary"
-              />
               <ClockWidgetSettings
                 project={project}
                 saveProject={saveEditorProject}

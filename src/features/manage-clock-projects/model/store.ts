@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import {
   clockProjectRepository,
+  type DuplicateProjectStatus,
   type ProjectIndexItem,
 } from "@/entities/clock-project";
 
@@ -9,6 +10,7 @@ type ProjectListState = {
   projects: ProjectIndexItem[];
   loading: boolean;
   error: string | null;
+  duplicateStatuses: Record<string, DuplicateProjectStatus>;
   load: () => Promise<void>;
   duplicate: (projectId: string) => Promise<boolean>;
   remove: (projectId: string) => Promise<boolean>;
@@ -18,6 +20,7 @@ export const useProjectListStore = create<ProjectListState>((set, get) => ({
   projects: [],
   loading: false,
   error: null,
+  duplicateStatuses: {},
 
   load: async () => {
     set({ loading: true, error: null });
@@ -44,8 +47,17 @@ export const useProjectListStore = create<ProjectListState>((set, get) => ({
   },
 
   duplicate: async (projectId) => {
+    if (get().duplicateStatuses[projectId]) return false;
     try {
-      await clockProjectRepository.duplicate(projectId);
+      await clockProjectRepository.duplicate(projectId, (status) => {
+        set((state) => ({
+          duplicateStatuses: {
+            ...state.duplicateStatuses,
+            [projectId]: status,
+          },
+          error: status === "error" ? state.error : null,
+        }));
+      });
       await get().load();
       return true;
     } catch (error: unknown) {
@@ -56,6 +68,12 @@ export const useProjectListStore = create<ProjectListState>((set, get) => ({
             : "프로젝트를 복제하지 못했어요.",
       });
       return false;
+    } finally {
+      set((state) => {
+        const { [projectId]: _finished, ...duplicateStatuses } =
+          state.duplicateStatuses;
+        return { duplicateStatuses };
+      });
     }
   },
 

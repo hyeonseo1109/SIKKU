@@ -2,10 +2,10 @@
   "expo": {
     "name": "시꾸",
     "slug": "sikku",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "sikku",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
       [
@@ -18,7 +18,20 @@
       ]
     ],
     "android": {
-      "package": "com.sikku.app",
+      "package": "com.hendo.sikku",
+      "versionCode": 1,
+      "allowBackup": false,
+      "permissions": ["android.permission.RECEIVE_BOOT_COMPLETED"],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "predictiveBackGestureEnabled": true
     },
     "experiments": {
