@@ -11,6 +11,7 @@ import {
   resolveCanvasShadow,
   useClockProjectStore,
 } from "@/entities/clock-project";
+import type { ClockCanvasShadow } from "@/entities/clock-project";
 import type {
   DigitValue,
   DigitalDisplayTransform,
@@ -88,6 +89,13 @@ const SEPARATORS: { label: string; value: DigitalSeparatorStyle }[] = [
   { label: "공백", value: "space" },
   { label: "없음", value: "none" },
 ];
+const SHADOW_COLORS = [
+  { label: "차콜", value: "#18312E" },
+  { label: "민트", value: "#2F6F68" },
+  { label: "블루", value: "#315B7D" },
+  { label: "로즈", value: "#8A5263" },
+  { label: "골드", value: "#8A6A32" },
+] as const;
 
 const categoryForTarget = (target: ImageTarget) => {
   if (target.kind === "background") return "background" as const;
@@ -301,6 +309,19 @@ export const EditorPage = () => {
       void chooseImage({ kind: "digit", digit });
       return;
     }
+    if (digit === "colon" && project.digitalConfig.separatorStyle !== "image") {
+      changeProject((current) => ({
+        ...current,
+        digitalConfig: current.digitalConfig
+          ? {
+              ...current.digitalConfig,
+              colonVisible: true,
+              separatorStyle: "image",
+            }
+          : undefined,
+      }));
+      return;
+    }
     Alert.alert(
       `${digit === "colon" ? ":" : digit} 이미지`,
       "작업을 선택해 주세요.",
@@ -336,6 +357,10 @@ export const EditorPage = () => {
                 assets: current.assets.filter((item) => item.id !== asset.id),
                 digitalConfig: {
                   ...current.digitalConfig,
+                  ...(digit === "colon" &&
+                  current.digitalConfig.separatorStyle === "image"
+                    ? { separatorStyle: "colon" as const }
+                    : {}),
                   digitImageMap,
                   digitAssetMap,
                 },
@@ -483,6 +508,16 @@ export const EditorPage = () => {
     : "colon";
   const canvasCornerRadius = resolveCanvasCornerRadius(project.canvas);
   const canvasShadow = resolveCanvasShadow(project.canvas);
+  const updateCanvasShadow = (
+    getNext: (shadow: ClockCanvasShadow) => ClockCanvasShadow,
+  ) =>
+    changeProject((current) => ({
+      ...current,
+      canvas: {
+        ...current.canvas,
+        shadow: getNext(resolveCanvasShadow(current.canvas)),
+      },
+    }));
 
   return (
     <AppScreen>
@@ -630,83 +665,113 @@ export const EditorPage = () => {
                 />
               </View>
               {canvasShadow.enabled ? (
-                <View style={styles.wrapRow}>
-                  <AppButton
-                    label={`농도 − (${Math.round(canvasShadow.opacity * 100)}%)`}
-                    onPress={() =>
-                      changeProject((current) => {
-                        const shadow = resolveCanvasShadow(current.canvas);
-                        return {
-                          ...current,
-                          canvas: {
-                            ...current.canvas,
-                            shadow: {
-                              ...shadow,
-                              opacity: Math.max(0.04, shadow.opacity - 0.04),
-                            },
-                          },
-                        };
-                      })
-                    }
-                    variant="secondary"
-                  />
-                  <AppButton
-                    label="농도 +"
-                    onPress={() =>
-                      changeProject((current) => {
-                        const shadow = resolveCanvasShadow(current.canvas);
-                        return {
-                          ...current,
-                          canvas: {
-                            ...current.canvas,
-                            shadow: {
-                              ...shadow,
-                              opacity: Math.min(0.5, shadow.opacity + 0.04),
-                            },
-                          },
-                        };
-                      })
-                    }
-                    variant="secondary"
-                  />
-                  <AppButton
-                    label={`퍼짐 − (${Math.round(canvasShadow.blur)})`}
-                    onPress={() =>
-                      changeProject((current) => {
-                        const shadow = resolveCanvasShadow(current.canvas);
-                        return {
-                          ...current,
-                          canvas: {
-                            ...current.canvas,
-                            shadow: {
-                              ...shadow,
-                              blur: Math.max(0, shadow.blur - 3),
-                            },
-                          },
-                        };
-                      })
-                    }
-                    variant="secondary"
-                  />
-                  <AppButton
-                    label="퍼짐 +"
-                    onPress={() =>
-                      changeProject((current) => {
-                        const shadow = resolveCanvasShadow(current.canvas);
-                        return {
-                          ...current,
-                          canvas: {
-                            ...current.canvas,
-                            shadow: {
-                              ...shadow,
-                              blur: Math.min(48, shadow.blur + 3),
-                            },
-                          },
-                        };
-                      })
-                    }
-                    variant="secondary"
-                  />
+                <View style={styles.controlGroup}>
+                  <AppText tone="secondary" variant="label">
+                    그림자 색상
+                  </AppText>
+                  <View style={styles.wrapRow}>
+                    {SHADOW_COLORS.map((color) => (
+                      <AppButton
+                        key={color.value}
+                        label={color.label}
+                        onPress={() =>
+                          updateCanvasShadow((shadow) => ({
+                            ...shadow,
+                            color: color.value,
+                          }))
+                        }
+                        selected={canvasShadow.color === color.value}
+                        variant="secondary"
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.wrapRow}>
+                    <AppButton
+                      label={`농도 − (${Math.round(canvasShadow.opacity * 100)}%)`}
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          opacity: Math.max(0.04, shadow.opacity - 0.04),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                    <AppButton
+                      label="농도 +"
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          opacity: Math.min(0.5, shadow.opacity + 0.04),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                    <AppButton
+                      label={`퍼짐 − (${Math.round(canvasShadow.blur)})`}
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          blur: Math.max(0, shadow.blur - 3),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                    <AppButton
+                      label="퍼짐 +"
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          blur: Math.min(48, shadow.blur + 3),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                  </View>
+                  <AppText tone="secondary" variant="label">
+                    그림자 위치
+                  </AppText>
+                  <View style={styles.wrapRow}>
+                    <AppButton
+                      label={`X − (${Math.round(canvasShadow.offsetX)})`}
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          offsetX: Math.max(-40, shadow.offsetX - 2),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                    <AppButton
+                      label="X +"
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          offsetX: Math.min(40, shadow.offsetX + 2),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                    <AppButton
+                      label={`Y − (${Math.round(canvasShadow.offsetY)})`}
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          offsetY: Math.max(-40, shadow.offsetY - 2),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                    <AppButton
+                      label="Y +"
+                      onPress={() =>
+                        updateCanvasShadow((shadow) => ({
+                          ...shadow,
+                          offsetY: Math.min(40, shadow.offsetY + 2),
+                        }))
+                      }
+                      variant="secondary"
+                    />
+                  </View>
                 </View>
               ) : null}
               <AppButton
@@ -1028,6 +1093,12 @@ export const EditorPage = () => {
                   />
                 ))}
               </View>
+              {digitalSeparatorStyle === "image" ? (
+                <AppText tone="secondary">
+                  구분자 이미지를 사용 중이에요. 위의 문자 구분자를 선택하면
+                  이미지 모드가 해제됩니다.
+                </AppText>
+              ) : null}
               <AppText variant="label">숫자 자리별 위치</AppText>
               <AppText tone="secondary">
                 각 자리를 선택한 뒤 캔버스에서 따로 끌어서 배치할 수 있어요.
@@ -1074,11 +1145,13 @@ export const EditorPage = () => {
                 {DIGITS.map((digit) => (
                   <AppButton
                     key={digit}
-                    label={digit === "colon" ? ":" : digit}
+                    label={digit === "colon" ? "구분자 이미지" : digit}
                     onPress={() => manageDigit(digit)}
-                    selected={Boolean(
-                      project.digitalConfig?.digitImageMap[digit],
-                    )}
+                    selected={
+                      digit === "colon"
+                        ? digitalSeparatorStyle === "image"
+                        : Boolean(project.digitalConfig?.digitImageMap[digit])
+                    }
                     variant="secondary"
                   />
                 ))}

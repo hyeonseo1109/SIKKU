@@ -22,6 +22,7 @@ object DigitalTimeFormatter {
         "dash" -> "-"
         "space" -> " "
         "none" -> ""
+        "colon", "image" -> ":"
         else -> ":"
       }
     } else {

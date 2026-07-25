@@ -14,6 +14,7 @@ data class NativeCanvasShadow(
   val color: String = "#214E49",
   val opacity: Float = 0.18f,
   val blur: Float = 18f,
+  val offsetX: Float = 0f,
   val offsetY: Float = 8f,
 )
 

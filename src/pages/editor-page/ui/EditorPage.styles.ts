@@ -17,6 +17,9 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
     padding: spacing.sm,
+    borderColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
+    ...shadows.card,
   },
   headerButton: {
     minWidth: 72,
@@ -33,7 +36,8 @@ export const styles = StyleSheet.create({
     borderRadius: radius.lg,
     flex: 1,
     minHeight: 230,
-    overflow: "hidden",
+    borderColor: "rgba(255,255,255,0.9)",
+    borderWidth: 1,
     ...shadows.card,
   },
   tabScroller: {
@@ -48,6 +52,14 @@ export const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  controlGroup: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.md,
   },
   wrapRow: {
     flexDirection: "row",

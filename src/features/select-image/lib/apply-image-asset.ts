@@ -102,6 +102,9 @@ export const applyImageAsset = (
       ...next,
       digitalConfig: {
         ...next.digitalConfig,
+        ...(target.digit === "colon"
+          ? { colonVisible: true, separatorStyle: "image" as const }
+          : {}),
         digitImageMap: {
           ...next.digitalConfig.digitImageMap,
           [target.digit]: asset.processedUri,

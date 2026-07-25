@@ -4,7 +4,7 @@ export type DigitValue =
 export type DigitalClockFormat = "HH:mm" | "h:mm";
 
 export type DigitalSeparatorStyle =
-  "colon" | "pipe" | "small-pipe" | "dash" | "space" | "none";
+  "colon" | "pipe" | "small-pipe" | "dash" | "space" | "image" | "none";
 
 export type DigitalSlotId =
   "hour-tens" | "hour-ones" | "colon" | "minute-tens" | "minute-ones";

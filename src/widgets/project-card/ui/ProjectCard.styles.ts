@@ -4,12 +4,15 @@ import { colors, radius, shadows, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   card: {
-    overflow: "hidden",
     borderRadius: radius.lg,
-    borderColor: colors.border,
-    borderWidth: 0,
+    ...shadows.floating,
+  },
+  cardSurface: {
     backgroundColor: colors.surface,
-    ...shadows.card,
+    borderColor: "rgba(255,255,255,0.92)",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
   },
   preview: {
     height: 176,

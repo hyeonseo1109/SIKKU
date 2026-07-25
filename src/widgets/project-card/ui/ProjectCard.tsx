@@ -33,56 +33,58 @@ export const ProjectCard = ({
 }: ProjectCardProps) => {
   return (
     <View style={styles.card}>
-      <Pressable
-        accessibilityLabel={`${project.name} 프로젝트 열기`}
-        accessibilityRole="button"
-        onPress={() => onOpen(project.id)}
-        style={styles.preview}
-      >
-        {project.previewImageUri ? (
-          <Image
-            contentFit="cover"
-            source={project.previewImageUri}
-            style={styles.previewImage}
-          />
-        ) : (
-          <View style={styles.placeholder}>
-            <AppText variant="heading">
-              {project.type === "analog" ? "◷" : "10:09"}
+      <View style={styles.cardSurface}>
+        <Pressable
+          accessibilityLabel={`${project.name} 프로젝트 열기`}
+          accessibilityRole="button"
+          onPress={() => onOpen(project.id)}
+          style={styles.preview}
+        >
+          {project.previewImageUri ? (
+            <Image
+              contentFit="cover"
+              source={project.previewImageUri}
+              style={styles.previewImage}
+            />
+          ) : (
+            <View style={styles.placeholder}>
+              <AppText variant="heading">
+                {project.type === "analog" ? "◷" : "10:09"}
+              </AppText>
+            </View>
+          )}
+        </Pressable>
+
+        <View style={styles.content}>
+          <View style={styles.meta}>
+            <AppText variant="heading">{project.name}</AppText>
+            <AppText tone="secondary" variant="label">
+              {project.type === "analog" ? "아날로그" : "디지털"} ·{" "}
+              {formatUpdatedAt(project.updatedAt)}
             </AppText>
           </View>
-        )}
-      </Pressable>
-
-      <View style={styles.content}>
-        <View style={styles.meta}>
-          <AppText variant="heading">{project.name}</AppText>
-          <AppText tone="secondary" variant="label">
-            {project.type === "analog" ? "아날로그" : "디지털"} ·{" "}
-            {formatUpdatedAt(project.updatedAt)}
-          </AppText>
-        </View>
-        <View style={styles.actions}>
-          <View style={styles.action}>
-            <AppButton
-              label="열기"
-              onPress={() => onOpen(project.id)}
-              variant="secondary"
-            />
-          </View>
-          <View style={styles.action}>
-            <AppButton
-              label="복제"
-              onPress={() => onDuplicate(project.id)}
-              variant="secondary"
-            />
-          </View>
-          <View style={styles.action}>
-            <AppButton
-              label="삭제"
-              onPress={() => onDelete(project.id)}
-              variant="secondary"
-            />
+          <View style={styles.actions}>
+            <View style={styles.action}>
+              <AppButton
+                label="열기"
+                onPress={() => onOpen(project.id)}
+                variant="secondary"
+              />
+            </View>
+            <View style={styles.action}>
+              <AppButton
+                label="복제"
+                onPress={() => onDuplicate(project.id)}
+                variant="secondary"
+              />
+            </View>
+            <View style={styles.action}>
+              <AppButton
+                label="삭제"
+                onPress={() => onDelete(project.id)}
+                variant="secondary"
+              />
+            </View>
           </View>
         </View>
       </View>

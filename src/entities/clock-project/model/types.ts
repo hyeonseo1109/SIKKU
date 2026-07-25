@@ -13,6 +13,7 @@ export type ClockCanvasShadow = {
   color: string;
   opacity: number;
   blur: number;
+  offsetX: number;
   offsetY: number;
 };
 

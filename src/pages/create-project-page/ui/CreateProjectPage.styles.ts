@@ -10,6 +10,9 @@ export const styles = StyleSheet.create({
     gap: spacing.lg,
     marginBottom: spacing.xl,
     padding: spacing.lg,
+    borderColor: "rgba(255,255,255,0.82)",
+    borderWidth: 1,
+    ...shadows.card,
   },
   section: {
     backgroundColor: colors.surface,
@@ -17,6 +20,8 @@ export const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderColor: "rgba(255,255,255,0.9)",
+    borderWidth: 1,
     ...shadows.card,
   },
   input: {

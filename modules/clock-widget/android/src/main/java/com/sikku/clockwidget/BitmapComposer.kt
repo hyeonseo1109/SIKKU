@@ -36,7 +36,7 @@ class BitmapComposer(
           val alpha = (config.shadow.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
           setShadowLayer(
             config.shadow.blur * viewport.width / config.width,
-            0f,
+            config.shadow.offsetX * viewport.width / config.width,
             config.shadow.offsetY * viewport.width / config.width,
             (shadowColor and 0x00FFFFFF) or (alpha shl 24),
           )
@@ -51,7 +51,7 @@ class BitmapComposer(
         this.color = android.graphics.Color.WHITE
         setShadowLayer(
           config.shadow.blur * scale,
-          0f,
+          config.shadow.offsetX * scale,
           config.shadow.offsetY * scale,
           (shadowColor and 0x00FFFFFF) or (alpha shl 24),
         )

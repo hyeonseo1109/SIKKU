@@ -1,8 +1,7 @@
 import type { RefObject } from "react";
 import { useCallback, useMemo, useState } from "react";
-import { Image } from "expo-image";
 import type { LayoutChangeEvent } from "react-native";
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 
 import { getHourAngle, getMinuteAngle } from "@/entities/analog-clock";
 import type { ClockLayerTransform } from "@/entities/clock-layer";
@@ -26,6 +25,15 @@ import { TransformableLayer } from "./TransformableLayer";
 const MAX_CANVAS_HEIGHT = 390;
 const CENTER_CAP_SIZE = 12;
 const DIGITAL_SELECTION_PREFIX = "__digital_slot__:";
+
+const withOpacity = (color: string, opacity: number): string => {
+  const normalized = color.replace("#", "");
+  if (!/^[\dA-Fa-f]{6}$/.test(normalized)) return color;
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${opacity})`;
+};
 
 const getDigitalSelectionId = (slotId: DigitalSlotId) =>
   `${DIGITAL_SELECTION_PREFIX}${slotId}`;
@@ -92,9 +100,12 @@ export const ClockCanvas = ({
   const canvasShadow = resolveCanvasShadow(project.canvas);
   const shadowEnabled = canvasShadow.enabled;
   const shadowBlur = canvasShadow.blur * scale;
+  const shadowOffsetX = canvasShadow.offsetX * scale;
   const shadowOffsetY = canvasShadow.offsetY * scale;
   const shadowPadding = shadowEnabled
-    ? Math.ceil(shadowBlur + Math.abs(shadowOffsetY))
+    ? Math.ceil(
+        shadowBlur + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)),
+      )
     : 0;
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
@@ -139,12 +150,20 @@ export const ClockCanvas = ({
               {
                 backgroundColor: project.canvas.backgroundColor,
                 borderRadius: cornerRadius,
-                elevation: shadowEnabled ? Math.max(1, shadowBlur / 3) : 0,
+                boxShadow: shadowEnabled
+                  ? [
+                      {
+                        blurRadius: shadowBlur,
+                        color: withOpacity(
+                          canvasShadow.color,
+                          canvasShadow.opacity,
+                        ),
+                        offsetX: shadowOffsetX,
+                        offsetY: shadowOffsetY,
+                      },
+                    ]
+                  : undefined,
                 height: screenHeight,
-                shadowColor: canvasShadow.color,
-                shadowOffset: { width: 0, height: shadowOffsetY },
-                shadowOpacity: shadowEnabled ? canvasShadow.opacity : 0,
-                shadowRadius: shadowBlur,
                 width: screenWidth,
               },
             ]}
@@ -162,10 +181,12 @@ export const ClockCanvas = ({
             >
               {project.canvas.backgroundImageUri ? (
                 <Image
-                  contentFit="cover"
-                  pointerEvents="none"
-                  source={project.canvas.backgroundImageUri}
-                  style={styles.backgroundImage}
+                  resizeMode="cover"
+                  source={{ uri: project.canvas.backgroundImageUri }}
+                  style={[
+                    styles.backgroundImage,
+                    { borderRadius: cornerRadius },
+                  ]}
                 />
               ) : null}
 

@@ -38,6 +38,7 @@ export const buildClockProject = ({
         color: "#214E49",
         opacity: 0.18,
         blur: 18,
+        offsetX: 0,
         offsetY: 8,
       },
     },

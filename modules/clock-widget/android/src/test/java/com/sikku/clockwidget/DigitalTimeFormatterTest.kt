@@ -35,6 +35,10 @@ class DigitalTimeFormatterTest {
       "03 07",
       DigitalTimeFormatter.format(config("HH:mm", separatorStyle = "space"), at(3, 7)),
     )
+    assertEquals(
+      "03:07",
+      DigitalTimeFormatter.format(config("HH:mm", separatorStyle = "image"), at(3, 7)),
+    )
   }
 
   private fun config(

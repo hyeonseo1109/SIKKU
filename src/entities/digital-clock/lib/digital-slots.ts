@@ -39,6 +39,7 @@ export const getDigitalSeparatorCharacter = (
 ): string => {
   switch (style) {
     case "colon":
+    case "image":
       return ":";
     case "pipe":
     case "small-pipe":
@@ -85,7 +86,10 @@ export const getDigitalTimeSlots = (
       id: "colon",
       character: separator,
       compact: separatorStyle === "small-pipe",
-      digit: separatorStyle === "colon" ? "colon" : undefined,
+      digit:
+        separatorStyle === "colon" || separatorStyle === "image"
+          ? "colon"
+          : undefined,
     });
   }
   slots.push(

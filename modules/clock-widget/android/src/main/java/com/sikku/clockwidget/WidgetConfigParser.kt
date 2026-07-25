@@ -42,6 +42,7 @@ class WidgetConfigParser(
         blur = shadowJson?.optDouble("blur", 18.0)
           ?.toFloat()
           ?.coerceAtLeast(0f) ?: 18f,
+        offsetX = shadowJson?.optDouble("offsetX", 0.0)?.toFloat() ?: 0f,
         offsetY = shadowJson?.optDouble("offsetY", 8.0)?.toFloat() ?: 8f,
       ),
     )

@@ -9,10 +9,11 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
+    transform: [{ translateY: 0 }],
   },
   primary: {
     backgroundColor: colors.primary,
-    ...shadows.card,
+    ...shadows.control,
   },
   secondary: {
     backgroundColor: colors.surfaceMuted,
@@ -22,10 +23,11 @@ export const styles = StyleSheet.create({
   selected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-    ...shadows.card,
+    ...shadows.control,
   },
   pressed: {
-    opacity: 0.82,
+    opacity: 0.88,
+    transform: [{ translateY: 1 }],
   },
   disabled: {
     opacity: 0.45,

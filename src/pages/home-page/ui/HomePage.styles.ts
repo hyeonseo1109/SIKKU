@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, spacing } from "@/shared/config/theme";
+import { colors, radius, shadows, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   header: {
@@ -17,6 +17,9 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    borderColor: "rgba(255,255,255,0.9)",
+    borderWidth: 1,
+    ...shadows.control,
   },
   badgeLabel: {
     color: colors.primary,
