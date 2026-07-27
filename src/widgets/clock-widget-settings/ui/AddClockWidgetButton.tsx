@@ -64,10 +64,6 @@ export const AddClockWidgetButton = ({
       }
 
       await onCompleted?.();
-      showDialog({
-        title: "위젯 추가 요청됨",
-        message: "홈 화면의 확인 창에서 시꾸 위젯을 추가해 주세요.",
-      });
     } catch (error: unknown) {
       showDialog({
         title: "위젯을 추가하지 못했어요",
