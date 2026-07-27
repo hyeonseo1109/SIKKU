@@ -11,6 +11,7 @@ export type WidgetLayerConfig = {
   imagePath: string;
   zIndex: number;
   opacity: number;
+  tintColor?: string;
   x: number;
   y: number;
   width: number;
@@ -39,6 +40,8 @@ export type NativeWidgetConfig = {
     digitSpacing: number;
     colonVisible: boolean;
     digitImagePaths: Partial<Record<DigitValue, string>>;
+    digitColor?: string;
+    digitOpacity: number;
     transform: NonNullable<ClockProject["digitalConfig"]>["transform"];
     slotTransforms: Record<
       DigitalSlotId,
@@ -73,6 +76,7 @@ const exportLayers = (project: ClockProject): WidgetLayerConfig[] =>
         imagePath: layer.imageUri,
         zIndex: layer.zIndex,
         opacity: layer.opacity,
+        tintColor: layer.tintColor,
         ...layer.transform,
       };
     });
@@ -114,6 +118,8 @@ export const exportWidgetConfig = (
           digitSpacing: project.digitalConfig.digitSpacing,
           colonVisible: project.digitalConfig.colonVisible,
           digitImagePaths,
+          digitColor: project.digitalConfig.digitColor,
+          digitOpacity: project.digitalConfig.digitOpacity ?? 1,
           transform: project.digitalConfig.transform,
           slotTransforms: resolveDigitalSlotTransforms(
             project.digitalConfig,

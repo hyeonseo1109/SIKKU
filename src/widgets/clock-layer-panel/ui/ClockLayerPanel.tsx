@@ -1,7 +1,13 @@
 import { View } from "react-native";
 
 import type { ClockLayer } from "@/entities/clock-layer";
-import { AppButton, AppText, useAppDialog } from "@/shared/ui";
+import {
+  AppButton,
+  AppText,
+  ColorField,
+  OpacityControl,
+  useAppDialog,
+} from "@/shared/ui";
 
 import { styles } from "./ClockLayerPanel.styles";
 
@@ -11,6 +17,8 @@ type ClockLayerPanelProps = {
   layers: ClockLayer[];
   selectedLayerId: string | null;
   onEditHand: (layer: ClockLayer) => void;
+  onOpacityChange: (layerId: string, opacity: number) => void;
+  onTintColorChange: (layerId: string, color?: string) => void;
   onMove: (layerId: string, direction: LayerDirection) => void;
   onReedit: (layer: ClockLayer) => void;
   onRemove: (layer: ClockLayer) => void;
@@ -23,11 +31,13 @@ export const ClockLayerPanel = ({
   layers,
   onEditHand,
   onMove,
+  onOpacityChange,
   onReedit,
   onRemove,
   onSelect,
   onToggleLock,
   onToggleVisibility,
+  onTintColorChange,
   selectedLayerId,
 }: ClockLayerPanelProps) => {
   const { showDialog } = useAppDialog();
@@ -127,6 +137,23 @@ export const ClockLayerPanel = ({
               variant="secondary"
             />
           </View>
+          <ColorField
+            label={`${selectedLayer.name} 색상`}
+            onChange={(color) => onTintColorChange(selectedLayer.id, color)}
+            value={selectedLayer.tintColor ?? "#18312E"}
+          />
+          {selectedLayer.tintColor ? (
+            <AppButton
+              label="원본 이미지 색상 사용"
+              onPress={() => onTintColorChange(selectedLayer.id, undefined)}
+              variant="secondary"
+            />
+          ) : null}
+          <OpacityControl
+            label={`${selectedLayer.name} 투명도`}
+            onChange={(opacity) => onOpacityChange(selectedLayer.id, opacity)}
+            value={selectedLayer.opacity}
+          />
         </View>
       ) : (
         <AppText tone="secondary">

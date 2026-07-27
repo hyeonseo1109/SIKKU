@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
@@ -30,7 +31,7 @@ class BitmapComposer(
     val color = WidgetColorParser.parse(config.backgroundColor)
     if (color != android.graphics.Color.TRANSPARENT) {
       val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        this.color = color
+        this.color = withOpacity(color, config.backgroundColorOpacity)
         if (config.shadow.enabled) {
           val shadowColor = WidgetColorParser.parse(config.shadow.color)
           val alpha = (config.shadow.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
@@ -66,13 +67,50 @@ class BitmapComposer(
         },
       )
     }
-    val path = config.backgroundImagePath ?: return
-    val bitmap = bitmapLoader.load(path, viewport.width.roundToInt(), viewport.height.roundToInt())
-      ?: return
-    val checkpoint = canvas.save()
-    canvas.clipPath(canvasPath(config, viewport))
-    canvas.drawBitmap(bitmap, centerCropSource(bitmap, destination), destination, IMAGE_PAINT)
-    canvas.restoreToCount(checkpoint)
+    val path = config.backgroundImagePath
+    if (path != null) {
+      val bitmap = bitmapLoader.load(
+        path,
+        viewport.width.roundToInt(),
+        viewport.height.roundToInt(),
+      )
+      if (bitmap != null) {
+        val checkpoint = canvas.save()
+        canvas.clipPath(canvasPath(config, viewport))
+        val imagePaint = Paint(IMAGE_PAINT).apply {
+          alpha = (config.backgroundImageOpacity.coerceIn(0f, 1f) * 255f).roundToInt()
+        }
+        canvas.drawBitmap(
+          bitmap,
+          centerCropSource(bitmap, destination),
+          destination,
+          imagePaint,
+        )
+        canvas.restoreToCount(checkpoint)
+      }
+    }
+    if (config.appearance == "glass") {
+      val glassPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = (2f * viewport.width / config.width).coerceAtLeast(1f)
+        this.color = 0xC8FFFFFF.toInt()
+      }
+      canvas.drawRoundRect(destination, cornerRadius, cornerRadius, glassPaint)
+      val highlight = RectF(
+        destination.left + glassPaint.strokeWidth,
+        destination.top + glassPaint.strokeWidth,
+        destination.right - glassPaint.strokeWidth,
+        destination.top + destination.height() * 0.38f,
+      )
+      canvas.drawRoundRect(
+        highlight,
+        cornerRadius,
+        cornerRadius,
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+          this.color = 0x38FFFFFF
+        },
+      )
+    }
   }
 
   fun clipToCanvas(
@@ -125,6 +163,12 @@ class BitmapComposer(
     canvas.rotate(rotation)
     val paint = Paint(IMAGE_PAINT).apply {
       alpha = (layer.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
+      layer.tintColor?.let { tint ->
+        colorFilter = PorterDuffColorFilter(
+          WidgetColorParser.parse(tint),
+          PorterDuff.Mode.SRC_IN,
+        )
+      }
     }
     canvas.drawBitmap(bitmap, null, destination, paint)
     canvas.restoreToCount(checkpoint)
@@ -136,12 +180,13 @@ class BitmapComposer(
     centerY: Float,
     sourceCanvas: NativeCanvasConfig,
     viewport: WidgetViewport,
+    color: String,
   ) {
     val scale = viewport.width / sourceCanvas.width
     val x = viewport.left + centerX * scale
     val y = viewport.top + centerY * scale
     canvas.drawCircle(x, y, 6f * scale, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = 0xFFF4A58C.toInt()
+      this.color = WidgetColorParser.parse(color)
     })
   }
 
@@ -169,6 +214,12 @@ class BitmapComposer(
     viewport.left + viewport.width,
     viewport.top + viewport.height,
   )
+
+  private fun withOpacity(color: Int, opacity: Float): Int {
+    val sourceAlpha = android.graphics.Color.alpha(color)
+    val alpha = (sourceAlpha * opacity.coerceIn(0f, 1f)).roundToInt()
+    return (color and 0x00FFFFFF) or (alpha shl 24)
+  }
 
   private fun canvasPath(
     config: NativeCanvasConfig,

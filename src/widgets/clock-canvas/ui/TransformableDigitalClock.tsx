@@ -54,6 +54,8 @@ export const TransformableDigitalClock = ({
       selected={selectedSlotId === slot.id}
       slotId={slot.id}
       transform={transforms[slot.id]}
+      color={config.digitColor}
+      opacity={config.digitOpacity ?? 1}
     />
   ));
 };

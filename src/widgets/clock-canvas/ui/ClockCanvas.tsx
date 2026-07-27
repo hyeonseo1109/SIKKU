@@ -25,8 +25,12 @@ import { TransformableLayer } from "./TransformableLayer";
 const MAX_CANVAS_HEIGHT = 390;
 const CENTER_CAP_SIZE = 12;
 const DIGITAL_SELECTION_PREFIX = "__digital_slot__:";
+const DEFAULT_HOUR_HAND_COLOR = "#18312E";
+const DEFAULT_MINUTE_HAND_COLOR = "#2F6F68";
+const DEFAULT_CENTER_CAP_COLOR = "#F3A58E";
 
 const withOpacity = (color: string, opacity: number): string => {
+  if (color === "transparent") return "transparent";
   const normalized = color.replace("#", "");
   if (!/^[\dA-Fa-f]{6}$/.test(normalized)) return color;
   const red = Number.parseInt(normalized.slice(0, 2), 16);
@@ -135,6 +139,55 @@ export const ClockCanvas = ({
         scale,
       )
     : null;
+  const backgroundOpacity = project.canvas.backgroundColorOpacity ?? 1;
+  const backgroundImageOpacity = project.canvas.backgroundImageOpacity ?? 1;
+  const isGlass = project.canvas.appearance === "glass";
+  const renderedBackgroundColor = withOpacity(
+    project.canvas.backgroundColor,
+    isGlass ? Math.min(backgroundOpacity, 0.62) : backgroundOpacity,
+  );
+  const hourHandLayer = project.analogConfig?.hourHandLayerId
+    ? project.layers.find(
+        (layer) => layer.id === project.analogConfig?.hourHandLayerId,
+      )
+    : undefined;
+  const minuteHandLayer = project.analogConfig?.minuteHandLayerId
+    ? project.layers.find(
+        (layer) => layer.id === project.analogConfig?.minuteHandLayerId,
+      )
+    : undefined;
+
+  const renderDefaultHand = (
+    kind: "hour" | "minute",
+    angle: number,
+    color: string,
+    opacity: number,
+  ) => {
+    if (!analogCenter) return null;
+    const isHour = kind === "hour";
+    const width = Math.max(3, project.canvas.width * (isHour ? 0.022 : 0.016));
+    const height = project.canvas.height * (isHour ? 0.22 : 0.32);
+    const screenHandWidth = width * scale;
+    const screenHandHeight = height * scale;
+    return (
+      <View
+        pointerEvents="none"
+        style={[
+          styles.defaultHand,
+          {
+            backgroundColor: color,
+            height: screenHandHeight,
+            left: analogCenter.x - screenHandWidth / 2,
+            opacity,
+            top: analogCenter.y - screenHandHeight,
+            transform: [{ rotate: `${angle}deg` }],
+            transformOrigin: [screenHandWidth / 2, screenHandHeight, 0],
+            width: screenHandWidth,
+          },
+        ]}
+      />
+    );
+  };
 
   return (
     <View onLayout={handleLayout} style={styles.stage}>
@@ -148,7 +201,7 @@ export const ClockCanvas = ({
             style={[
               styles.shadowFrame,
               {
-                backgroundColor: project.canvas.backgroundColor,
+                backgroundColor: renderedBackgroundColor,
                 borderRadius: cornerRadius,
                 boxShadow: shadowEnabled
                   ? [
@@ -175,7 +228,9 @@ export const ClockCanvas = ({
                   width: screenWidth,
                   height: screenHeight,
                   borderRadius: cornerRadius,
-                  backgroundColor: project.canvas.backgroundColor,
+                  backgroundColor: renderedBackgroundColor,
+                  borderColor: isGlass ? "rgba(255,255,255,0.76)" : undefined,
+                  borderWidth: isGlass ? Math.max(1, scale * 2) : 1,
                 },
               ]}
             >
@@ -185,7 +240,22 @@ export const ClockCanvas = ({
                   source={{ uri: project.canvas.backgroundImageUri }}
                   style={[
                     styles.backgroundImage,
-                    { borderRadius: cornerRadius },
+                    {
+                      borderRadius: cornerRadius,
+                      opacity: backgroundImageOpacity,
+                    },
+                  ]}
+                />
+              ) : null}
+              {isGlass ? (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.glassHighlight,
+                    {
+                      borderTopLeftRadius: cornerRadius,
+                      borderTopRightRadius: cornerRadius,
+                    },
                   ]}
                 />
               ) : null}
@@ -195,6 +265,29 @@ export const ClockCanvas = ({
                 onPress={() => onSelectLayer(null)}
                 style={styles.canvasDismissArea}
               />
+
+              {project.type === "analog" && project.analogConfig
+                ? !hourHandLayer
+                  ? renderDefaultHand(
+                      "hour",
+                      hourAngle,
+                      project.analogConfig.hourHandColor ??
+                        DEFAULT_HOUR_HAND_COLOR,
+                      project.analogConfig.hourHandOpacity ?? 1,
+                    )
+                  : null
+                : null}
+              {project.type === "analog" && project.analogConfig
+                ? !minuteHandLayer
+                  ? renderDefaultHand(
+                      "minute",
+                      minuteAngle,
+                      project.analogConfig.minuteHandColor ??
+                        DEFAULT_MINUTE_HAND_COLOR,
+                      project.analogConfig.minuteHandOpacity ?? 1,
+                    )
+                  : null
+                : null}
 
               {project.layers
                 .filter((layer) => layer.visible)
@@ -258,6 +351,9 @@ export const ClockCanvas = ({
                     {
                       left: analogCenter.x - CENTER_CAP_SIZE / 2,
                       top: analogCenter.y - CENTER_CAP_SIZE / 2,
+                      backgroundColor:
+                        project.analogConfig.centerCapColor ??
+                        DEFAULT_CENTER_CAP_COLOR,
                     },
                   ]}
                 />

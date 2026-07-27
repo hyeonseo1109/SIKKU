@@ -219,7 +219,18 @@ export const applyImageAsset = (
     zIndex: next.layers.length,
     visible: true,
     locked: false,
-    opacity: 1,
+    opacity:
+      type === "hour-hand"
+        ? (next.analogConfig?.hourHandOpacity ?? 1)
+        : type === "minute-hand"
+          ? (next.analogConfig?.minuteHandOpacity ?? 1)
+          : 1,
+    tintColor:
+      type === "hour-hand"
+        ? next.analogConfig?.hourHandColor
+        : type === "minute-hand"
+          ? next.analogConfig?.minuteHandColor
+          : undefined,
   };
 
   next = {

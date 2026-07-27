@@ -23,6 +23,8 @@ type TransformableDigitalSlotProps = {
   character: string;
   compact?: boolean;
   imageUri?: string;
+  color?: string;
+  opacity: number;
   onSelect: (slotId: DigitalSlotId) => void;
   onTransformEnd: (
     slotId: DigitalSlotId,
@@ -40,6 +42,8 @@ export const TransformableDigitalSlot = ({
   character,
   compact = false,
   imageUri,
+  color,
+  opacity,
   onSelect,
   onTransformEnd,
   scale,
@@ -158,6 +162,7 @@ export const TransformableDigitalSlot = ({
             top: transform.y * scale - screenHeight / 2,
             width: screenWidth,
             zIndex: selected ? 102 : 100,
+            opacity,
           },
           animatedStyle,
         ]}
@@ -168,6 +173,7 @@ export const TransformableDigitalSlot = ({
               contentFit="fill"
               source={imageUri}
               style={styles.digitalSlotImage}
+              tintColor={color}
             />
           </View>
         ) : (
@@ -176,7 +182,10 @@ export const TransformableDigitalSlot = ({
             numberOfLines={1}
             style={[
               styles.digitalSlotFallback,
-              { fontSize: screenHeight * (compact ? 0.44 : 0.8) },
+              {
+                color: color ?? "#18312E",
+                fontSize: screenHeight * (compact ? 0.44 : 0.8),
+              },
             ]}
           >
             {character}

@@ -114,7 +114,8 @@ const validateLayer = (
     (transform.tipX !== undefined && !unit(transform.tipX)) ||
     (transform.tipY !== undefined && !unit(transform.tipY)) ||
     !finite(layer.zIndex) ||
-    !unit(layer.opacity)
+    !unit(layer.opacity) ||
+    (layer.tintColor !== undefined && !validColor(layer.tintColor))
   ) {
     issues.push({
       code: "invalid-layer",
@@ -196,6 +197,12 @@ export const validateClockProject = (
     !positive(project.canvas.width) ||
     !positive(project.canvas.height) ||
     !validColor(project.canvas.backgroundColor) ||
+    (project.canvas.backgroundColorOpacity !== undefined &&
+      !unit(project.canvas.backgroundColorOpacity)) ||
+    (project.canvas.backgroundImageOpacity !== undefined &&
+      !unit(project.canvas.backgroundImageOpacity)) ||
+    (project.canvas.appearance !== undefined &&
+      !["solid", "glass"].includes(project.canvas.appearance)) ||
     (project.canvas.cornerRadius !== undefined &&
       (!finite(project.canvas.cornerRadius) ||
         project.canvas.cornerRadius < 0)) ||
@@ -284,7 +291,19 @@ export const validateClockProject = (
         path: "analogConfig.minuteHandLayerId",
       });
     }
-    if (!finite(analog.centerX) || !finite(analog.centerY)) {
+    if (
+      !finite(analog.centerX) ||
+      !finite(analog.centerY) ||
+      (analog.hourHandColor !== undefined &&
+        !validColor(analog.hourHandColor)) ||
+      (analog.minuteHandColor !== undefined &&
+        !validColor(analog.minuteHandColor)) ||
+      (analog.centerCapColor !== undefined &&
+        !validColor(analog.centerCapColor)) ||
+      (analog.hourHandOpacity !== undefined && !unit(analog.hourHandOpacity)) ||
+      (analog.minuteHandOpacity !== undefined &&
+        !unit(analog.minuteHandOpacity))
+    ) {
       issues.push({
         code: "invalid-analog-center",
         message: "시계 중심 좌표가 올바르지 않아요.",
@@ -331,6 +350,16 @@ export const validateClockProject = (
         code: "invalid-digit-spacing",
         message: "숫자 간격 값이 올바르지 않아요.",
         path: "digitalConfig.digitSpacing",
+      });
+    }
+    if (
+      (digital.digitColor !== undefined && !validColor(digital.digitColor)) ||
+      (digital.digitOpacity !== undefined && !unit(digital.digitOpacity))
+    ) {
+      issues.push({
+        code: "invalid-digit-appearance",
+        message: "숫자 색상 또는 투명도 값이 올바르지 않아요.",
+        path: "digitalConfig",
       });
     }
   }

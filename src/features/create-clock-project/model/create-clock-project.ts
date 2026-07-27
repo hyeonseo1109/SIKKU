@@ -32,6 +32,9 @@ export const buildClockProject = ({
       width,
       height,
       backgroundColor: "#FFFFFF",
+      backgroundColorOpacity: 1,
+      backgroundImageOpacity: 1,
+      appearance: "solid",
       cornerRadius: 24,
       shadow: {
         enabled: true,
@@ -53,6 +56,11 @@ export const buildClockProject = ({
             previewMode: "current",
             previewHour: 10,
             previewMinute: 10,
+            hourHandColor: "#18312E",
+            minuteHandColor: "#2F6F68",
+            hourHandOpacity: 1,
+            minuteHandOpacity: 1,
+            centerCapColor: "#F3A58E",
           }
         : undefined,
     digitalConfig:
@@ -64,6 +72,8 @@ export const buildClockProject = ({
             colonVisible: true,
             digitImageMap: {},
             digitAssetMap: {},
+            digitColor: "#18312E",
+            digitOpacity: 1,
             transform: {
               x: width / 2,
               y: height / 2,

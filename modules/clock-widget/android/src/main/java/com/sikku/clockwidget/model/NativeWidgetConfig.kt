@@ -4,7 +4,10 @@ data class NativeCanvasConfig(
   val width: Float,
   val height: Float,
   val backgroundColor: String,
-  val backgroundImagePath: String?,
+  val backgroundColorOpacity: Float = 1f,
+  val backgroundImagePath: String? = null,
+  val backgroundImageOpacity: Float = 1f,
+  val appearance: String = "solid",
   val cornerRadius: Float = 24f,
   val shadow: NativeCanvasShadow = NativeCanvasShadow(),
 )
@@ -24,6 +27,7 @@ data class NativeImageLayer(
   val imagePath: String,
   val zIndex: Int,
   val opacity: Float,
+  val tintColor: String? = null,
   val x: Float,
   val y: Float,
   val width: Float,
@@ -39,6 +43,11 @@ data class NativeAnalogConfig(
   val centerX: Float,
   val centerY: Float,
   val showCenterCap: Boolean,
+  val hourHandColor: String = "#18312E",
+  val minuteHandColor: String = "#2F6F68",
+  val hourHandOpacity: Float = 1f,
+  val minuteHandOpacity: Float = 1f,
+  val centerCapColor: String = "#F3A58E",
 )
 
 data class NativeDigitalTransform(
@@ -55,6 +64,8 @@ data class NativeDigitalConfig(
   val digitSpacing: Float,
   val colonVisible: Boolean,
   val digitImagePaths: Map<String, String>,
+  val digitColor: String? = null,
+  val digitOpacity: Float = 1f,
   val transform: NativeDigitalTransform,
   val slotTransforms: Map<String, NativeDigitalTransform> = emptyMap(),
 )

@@ -41,7 +41,14 @@ import {
   usePendingImageStore,
 } from "@/features/select-image";
 import { updateProjectPreview } from "@/features/update-project-preview";
-import { AppButton, AppScreen, AppText, useAppDialog } from "@/shared/ui";
+import {
+  AppButton,
+  AppScreen,
+  AppText,
+  ColorField,
+  OpacityControl,
+  useAppDialog,
+} from "@/shared/ui";
 import { AnalogAnchorEditor } from "@/widgets/analog-anchor-editor";
 import {
   ClockCanvas,
@@ -94,12 +101,16 @@ const SEPARATORS: { label: string; value: DigitalSeparatorStyle }[] = [
   { label: "공백", value: "space" },
   { label: "없음", value: "none" },
 ];
-const SHADOW_COLORS = [
-  { label: "차콜", value: "#18312E" },
-  { label: "민트", value: "#2F6F68" },
-  { label: "블루", value: "#315B7D" },
-  { label: "로즈", value: "#8A5263" },
-  { label: "골드", value: "#8A6A32" },
+const EDITOR_COLORS = [
+  "#FFFFFF",
+  "#F3A58E",
+  "#F5C96A",
+  "#67B8B0",
+  "#315B7D",
+  "#8D6BC1",
+  "#D85F78",
+  "#18312E",
+  "#000000",
 ] as const;
 
 const categoryForTarget = (target: ImageTarget) => {
@@ -679,6 +690,88 @@ export const EditorPage = () => {
                   />
                 ))}
               </View>
+              <ColorField
+                label="배경색 직접 선택"
+                onChange={(color) =>
+                  changeProject((current) => ({
+                    ...current,
+                    canvas: { ...current.canvas, backgroundColor: color },
+                  }))
+                }
+                swatches={EDITOR_COLORS}
+                value={
+                  project.canvas.backgroundColor === "transparent"
+                    ? "#FFFFFF"
+                    : project.canvas.backgroundColor
+                }
+              />
+              <OpacityControl
+                label="배경색 투명도"
+                onChange={(backgroundColorOpacity) =>
+                  changeProject((current) => ({
+                    ...current,
+                    canvas: {
+                      ...current.canvas,
+                      backgroundColorOpacity,
+                    },
+                  }))
+                }
+                value={project.canvas.backgroundColorOpacity ?? 1}
+              />
+              <AppText variant="label">배경 질감</AppText>
+              <View style={styles.wrapRow}>
+                <AppButton
+                  label="기본"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      canvas: { ...current.canvas, appearance: "solid" },
+                    }))
+                  }
+                  selected={project.canvas.appearance !== "glass"}
+                  variant="secondary"
+                />
+                <AppButton
+                  label="Glassy 반투명"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      canvas: {
+                        ...current.canvas,
+                        appearance: "glass",
+                        backgroundColor:
+                          current.canvas.backgroundColor === "transparent"
+                            ? "#EAF8F5"
+                            : current.canvas.backgroundColor,
+                        backgroundColorOpacity: Math.min(
+                          current.canvas.backgroundColorOpacity ?? 1,
+                          0.48,
+                        ),
+                        cornerRadius: Math.max(
+                          resolveCanvasCornerRadius(current.canvas),
+                          28,
+                        ),
+                        shadow: {
+                          ...resolveCanvasShadow(current.canvas),
+                          enabled: true,
+                          color: "#315B7D",
+                          opacity: 0.18,
+                          blur: 24,
+                          offsetY: 10,
+                        },
+                      },
+                    }))
+                  }
+                  selected={project.canvas.appearance === "glass"}
+                  variant="secondary"
+                />
+              </View>
+              {project.canvas.appearance === "glass" ? (
+                <AppText tone="secondary">
+                  반투명 색상, 밝은 테두리와 하이라이트를 겹쳐 iOS 글래스 느낌을
+                  만들어요.
+                </AppText>
+              ) : null}
               <AppText variant="label">배경 박스 모양</AppText>
               <View style={styles.wrapRow}>
                 <AppButton
@@ -736,25 +829,14 @@ export const EditorPage = () => {
               </View>
               {canvasShadow.enabled ? (
                 <View style={styles.controlGroup}>
-                  <AppText tone="secondary" variant="label">
-                    그림자 색상
-                  </AppText>
-                  <View style={styles.wrapRow}>
-                    {SHADOW_COLORS.map((color) => (
-                      <AppButton
-                        key={color.value}
-                        label={color.label}
-                        onPress={() =>
-                          updateCanvasShadow((shadow) => ({
-                            ...shadow,
-                            color: color.value,
-                          }))
-                        }
-                        selected={canvasShadow.color === color.value}
-                        variant="secondary"
-                      />
-                    ))}
-                  </View>
+                  <ColorField
+                    label="그림자 색상"
+                    onChange={(color) =>
+                      updateCanvasShadow((shadow) => ({ ...shadow, color }))
+                    }
+                    swatches={EDITOR_COLORS}
+                    value={canvasShadow.color}
+                  />
                   <View style={styles.wrapRow}>
                     <AppButton
                       label={`농도 − (${Math.round(canvasShadow.opacity * 100)}%)`}
@@ -849,6 +931,21 @@ export const EditorPage = () => {
                 onPress={() => void chooseImage({ kind: "background" })}
                 variant="secondary"
               />
+              {project.canvas.backgroundImageUri ? (
+                <OpacityControl
+                  label="배경 이미지 투명도"
+                  onChange={(backgroundImageOpacity) =>
+                    changeProject((current) => ({
+                      ...current,
+                      canvas: {
+                        ...current.canvas,
+                        backgroundImageOpacity,
+                      },
+                    }))
+                  }
+                  value={project.canvas.backgroundImageOpacity ?? 1}
+                />
+              ) : null}
               {project.canvas.backgroundImageAssetId ? (
                 <AppButton
                   label="배경 이미지 지우기"
@@ -944,6 +1041,109 @@ export const EditorPage = () => {
                     variant="secondary"
                   />
                 </View>
+              </View>
+              <View style={styles.controlGroup}>
+                <ColorField
+                  label="시침 색상"
+                  onChange={(color) =>
+                    changeProject((current) => {
+                      const handId = current.analogConfig?.hourHandLayerId;
+                      return {
+                        ...current,
+                        analogConfig: current.analogConfig
+                          ? { ...current.analogConfig, hourHandColor: color }
+                          : undefined,
+                        layers: current.layers.map((layer) =>
+                          layer.id === handId
+                            ? { ...layer, tintColor: color }
+                            : layer,
+                        ),
+                      };
+                    })
+                  }
+                  swatches={EDITOR_COLORS}
+                  value={project.analogConfig?.hourHandColor ?? "#18312E"}
+                />
+                <OpacityControl
+                  label="시침 투명도"
+                  onChange={(hourHandOpacity) =>
+                    changeProject((current) => {
+                      const handId = current.analogConfig?.hourHandLayerId;
+                      return {
+                        ...current,
+                        analogConfig: current.analogConfig
+                          ? {
+                              ...current.analogConfig,
+                              hourHandOpacity,
+                            }
+                          : undefined,
+                        layers: current.layers.map((layer) =>
+                          layer.id === handId
+                            ? { ...layer, opacity: hourHandOpacity }
+                            : layer,
+                        ),
+                      };
+                    })
+                  }
+                  value={project.analogConfig?.hourHandOpacity ?? 1}
+                />
+                <ColorField
+                  label="분침 색상"
+                  onChange={(color) =>
+                    changeProject((current) => {
+                      const handId = current.analogConfig?.minuteHandLayerId;
+                      return {
+                        ...current,
+                        analogConfig: current.analogConfig
+                          ? { ...current.analogConfig, minuteHandColor: color }
+                          : undefined,
+                        layers: current.layers.map((layer) =>
+                          layer.id === handId
+                            ? { ...layer, tintColor: color }
+                            : layer,
+                        ),
+                      };
+                    })
+                  }
+                  swatches={EDITOR_COLORS}
+                  value={project.analogConfig?.minuteHandColor ?? "#2F6F68"}
+                />
+                <OpacityControl
+                  label="분침 투명도"
+                  onChange={(minuteHandOpacity) =>
+                    changeProject((current) => {
+                      const handId = current.analogConfig?.minuteHandLayerId;
+                      return {
+                        ...current,
+                        analogConfig: current.analogConfig
+                          ? {
+                              ...current.analogConfig,
+                              minuteHandOpacity,
+                            }
+                          : undefined,
+                        layers: current.layers.map((layer) =>
+                          layer.id === handId
+                            ? { ...layer, opacity: minuteHandOpacity }
+                            : layer,
+                        ),
+                      };
+                    })
+                  }
+                  value={project.analogConfig?.minuteHandOpacity ?? 1}
+                />
+                <ColorField
+                  label="중심점 색상"
+                  onChange={(centerCapColor) =>
+                    changeProject((current) => ({
+                      ...current,
+                      analogConfig: current.analogConfig
+                        ? { ...current.analogConfig, centerCapColor }
+                        : undefined,
+                    }))
+                  }
+                  swatches={EDITOR_COLORS}
+                  value={project.analogConfig?.centerCapColor ?? "#F3A58E"}
+                />
               </View>
               <View style={styles.wrapRow}>
                 <AppButton
@@ -1140,6 +1340,50 @@ export const EditorPage = () => {
                   variant="secondary"
                 />
               </View>
+              <View style={styles.controlGroup}>
+                <ColorField
+                  label="숫자 및 구분자 색상"
+                  onChange={(digitColor) =>
+                    changeProject((current) => ({
+                      ...current,
+                      digitalConfig: current.digitalConfig
+                        ? { ...current.digitalConfig, digitColor }
+                        : undefined,
+                    }))
+                  }
+                  swatches={EDITOR_COLORS}
+                  value={project.digitalConfig.digitColor ?? "#18312E"}
+                />
+                <OpacityControl
+                  label="숫자 및 구분자 투명도"
+                  onChange={(digitOpacity) =>
+                    changeProject((current) => ({
+                      ...current,
+                      digitalConfig: current.digitalConfig
+                        ? { ...current.digitalConfig, digitOpacity }
+                        : undefined,
+                    }))
+                  }
+                  value={project.digitalConfig.digitOpacity ?? 1}
+                />
+                {project.digitalConfig.digitColor ? (
+                  <AppButton
+                    label="숫자 이미지 원본 색상 사용"
+                    onPress={() =>
+                      changeProject((current) => ({
+                        ...current,
+                        digitalConfig: current.digitalConfig
+                          ? {
+                              ...current.digitalConfig,
+                              digitColor: undefined,
+                            }
+                          : undefined,
+                      }))
+                    }
+                    variant="secondary"
+                  />
+                ) : null}
+              </View>
               <AppText variant="label">시간 구분자</AppText>
               <View style={styles.wrapRow}>
                 {SEPARATORS.map((separator) => (
@@ -1258,6 +1502,14 @@ export const EditorPage = () => {
                     layers: moveLayer(current.layers, layerId, direction),
                   }))
                 }
+                onOpacityChange={(layerId, opacity) =>
+                  changeProject((current) => ({
+                    ...current,
+                    layers: current.layers.map((layer) =>
+                      layer.id === layerId ? { ...layer, opacity } : layer,
+                    ),
+                  }))
+                }
                 onReedit={reeditLayer}
                 onRemove={removeLayer}
                 onSelect={selectLayer}
@@ -1278,6 +1530,14 @@ export const EditorPage = () => {
                       layer.id === layerId
                         ? { ...layer, visible: !layer.visible }
                         : layer,
+                    ),
+                  }))
+                }
+                onTintColorChange={(layerId, tintColor) =>
+                  changeProject((current) => ({
+                    ...current,
+                    layers: current.layers.map((layer) =>
+                      layer.id === layerId ? { ...layer, tintColor } : layer,
                     ),
                   }))
                 }

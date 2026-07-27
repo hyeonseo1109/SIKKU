@@ -21,6 +21,15 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
   },
+  glassHighlight: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    height: "38%",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 1,
+  },
   backgroundImage: {
     position: "absolute",
     top: 0,
@@ -41,6 +50,11 @@ export const styles = StyleSheet.create({
   },
   layer: {
     position: "absolute",
+  },
+  defaultHand: {
+    borderRadius: radius.full,
+    position: "absolute",
+    zIndex: 90,
   },
   selection: {
     position: "absolute",

@@ -29,6 +29,8 @@ export type BaseClockLayer = {
   visible: boolean;
   locked: boolean;
   opacity: number;
+  /** Optional monochrome tint. Undefined preserves the source image colors. */
+  tintColor?: string;
 };
 
 export type DecorationLayer = BaseClockLayer & {

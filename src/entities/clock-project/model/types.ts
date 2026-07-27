@@ -7,6 +7,7 @@ export const CLOCK_PROJECT_SCHEMA_VERSION = 1;
 
 export type ClockType = "analog" | "digital";
 export type CanvasPreset = "square" | "landscape" | "portrait";
+export type CanvasAppearance = "solid" | "glass";
 
 export type ClockCanvasShadow = {
   enabled: boolean;
@@ -22,8 +23,11 @@ export type ClockCanvas = {
   width: number;
   height: number;
   backgroundColor: string;
+  backgroundColorOpacity?: number;
   backgroundImageUri?: string;
   backgroundImageAssetId?: string;
+  backgroundImageOpacity?: number;
+  appearance?: CanvasAppearance;
   cornerRadius?: number;
   shadow?: ClockCanvasShadow;
 };

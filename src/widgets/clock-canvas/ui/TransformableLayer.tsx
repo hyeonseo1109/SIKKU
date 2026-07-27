@@ -224,6 +224,7 @@ const TransformableLayerComponent = ({
           contentFit="fill"
           source={layer.imageUri}
           style={StyleSheet.absoluteFill}
+          tintColor={layer.tintColor}
         />
         {selected ? (
           <View

@@ -7,4 +7,9 @@ export type AnalogClockConfig = {
   previewMode: "current" | "custom";
   previewHour: number;
   previewMinute: number;
+  hourHandColor?: string;
+  minuteHandColor?: string;
+  hourHandOpacity?: number;
+  minuteHandOpacity?: number;
+  centerCapColor?: string;
 };

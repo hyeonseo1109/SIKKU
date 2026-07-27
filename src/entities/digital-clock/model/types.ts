@@ -24,6 +24,9 @@ export type DigitalClockConfig = {
   colonVisible: boolean;
   digitImageMap: Partial<Record<DigitValue, string>>;
   digitAssetMap: Partial<Record<DigitValue, string>>;
+  /** Applies to fallback text and, when set, tints custom digit images. */
+  digitColor?: string;
+  digitOpacity?: number;
   transform: DigitalDisplayTransform;
   slotTransforms?: Partial<Record<DigitalSlotId, DigitalDisplayTransform>>;
 };

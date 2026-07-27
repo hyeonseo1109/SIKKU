@@ -3,6 +3,8 @@ package com.sikku.clockwidget
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import com.sikku.clockwidget.model.NativeDigitalConfig
 import com.sikku.clockwidget.model.NativeWidgetConfig
@@ -124,20 +126,31 @@ class DigitalClockRenderer(
       bitmapLoader.load(it, destination.width().toInt(), destination.height().toInt())
     }
     if (bitmap != null) {
-      canvas.drawBitmap(bitmap, null, destination, IMAGE_PAINT)
+      val paint = Paint(IMAGE_PAINT).apply {
+        alpha = (config.digitOpacity.coerceIn(0f, 1f) * 255f).toInt()
+        config.digitColor?.let { color ->
+          colorFilter = PorterDuffColorFilter(
+            WidgetColorParser.parse(color),
+            PorterDuff.Mode.SRC_IN,
+          )
+        }
+      }
+      canvas.drawBitmap(bitmap, null, destination, paint)
     } else {
-      drawFallback(canvas, character, destination, compact)
+      drawFallback(canvas, config, character, destination, compact)
     }
   }
 
   private fun drawFallback(
     canvas: Canvas,
+    config: NativeDigitalConfig,
     character: Char,
     bounds: RectF,
     compact: Boolean,
   ) {
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = Color.BLACK
+      color = config.digitColor?.let(WidgetColorParser::parse) ?: Color.BLACK
+      alpha = (config.digitOpacity.coerceIn(0f, 1f) * 255f).toInt()
       textAlign = Paint.Align.CENTER
       textSize = bounds.height() * if (compact) 0.44f else 0.78f
       typeface = android.graphics.Typeface.DEFAULT_BOLD

@@ -29,7 +29,15 @@ class WidgetConfigParser(
       width = canvasJson.requirePositiveFloat("width"),
       height = canvasJson.requirePositiveFloat("height"),
       backgroundColor = canvasJson.optString("backgroundColor", "transparent"),
+      backgroundColorOpacity = canvasJson.optDouble("backgroundColorOpacity", 1.0)
+        .toFloat()
+        .coerceIn(0f, 1f),
       backgroundImagePath = canvasJson.optionalFilePath("backgroundImageUri"),
+      backgroundImageOpacity = canvasJson.optDouble("backgroundImageOpacity", 1.0)
+        .toFloat()
+        .coerceIn(0f, 1f),
+      appearance = canvasJson.optString("appearance", "solid")
+        .takeIf { it == "glass" } ?: "solid",
       cornerRadius = canvasJson.optDouble("cornerRadius", 24.0)
         .toFloat()
         .coerceAtLeast(0f),
@@ -59,6 +67,15 @@ class WidgetConfigParser(
         centerX = it.requireFiniteFloat("centerX"),
         centerY = it.requireFiniteFloat("centerY"),
         showCenterCap = it.optBoolean("showCenterCap", true),
+        hourHandColor = it.optString("hourHandColor", "#18312E"),
+        minuteHandColor = it.optString("minuteHandColor", "#2F6F68"),
+        hourHandOpacity = it.optDouble("hourHandOpacity", 1.0)
+          .toFloat()
+          .coerceIn(0f, 1f),
+        minuteHandOpacity = it.optDouble("minuteHandOpacity", 1.0)
+          .toFloat()
+          .coerceIn(0f, 1f),
+        centerCapColor = it.optString("centerCapColor", "#F3A58E"),
       )
     }
     val digital = root.optJSONObject("digital")?.let(::parseDigital)
@@ -85,6 +102,7 @@ class WidgetConfigParser(
     imagePath = filePathResolver.resolve(json.requireString("imagePath")),
     zIndex = json.optInt("zIndex", 0),
     opacity = json.requireFiniteFloat("opacity").coerceIn(0f, 1f),
+    tintColor = json.optString("tintColor").takeIf { it.isNotBlank() },
     x = json.requireFiniteFloat("x"),
     y = json.requireFiniteFloat("y"),
     width = json.requirePositiveFloat("width"),
@@ -116,6 +134,10 @@ class WidgetConfigParser(
       digitSpacing = json.requireFiniteFloat("digitSpacing"),
       colonVisible = json.optBoolean("colonVisible", true),
       digitImagePaths = paths,
+      digitColor = json.optString("digitColor").takeIf { it.isNotBlank() },
+      digitOpacity = json.optDouble("digitOpacity", 1.0)
+        .toFloat()
+        .coerceIn(0f, 1f),
       transform = parseDigitalTransform(transformJson),
       slotTransforms = slotTransforms,
     )
