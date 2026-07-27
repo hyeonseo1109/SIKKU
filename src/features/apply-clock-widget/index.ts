@@ -8,3 +8,4 @@ export {
   requestExactClockWidgetUpdatePermission,
   updateClockWidgets,
 } from "./model/applyClockWidget";
+export { ClockWidgetExactUpdatePermissionGate } from "./ui/ClockWidgetExactUpdatePermissionGate";

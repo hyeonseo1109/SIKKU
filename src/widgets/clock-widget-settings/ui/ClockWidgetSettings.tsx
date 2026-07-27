@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, Platform, View } from "react-native";
+import { Platform, View } from "react-native";
 
 import type { ClockProject } from "@/entities/clock-project";
 import {
-  canScheduleExactClockWidgetUpdates,
   configureUnassignedClockWidgets,
   getClockWidgets,
   isClockWidgetSupported,
-  requestExactClockWidgetUpdatePermission,
   updateClockWidgets,
 } from "@/features/apply-clock-widget";
 import type { InstalledClockWidget } from "@/shared/native/clock-widget";
@@ -26,9 +24,6 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
   const supported = isClockWidgetSupported();
   const [widgets, setWidgets] = useState<InstalledClockWidget[]>([]);
   const [busy, setBusy] = useState(false);
-  const [exactUpdatesEnabled, setExactUpdatesEnabled] = useState(() =>
-    supported ? canScheduleExactClockWidgetUpdates() : false,
-  );
   const projectWidgets = useMemo(
     () => widgets.filter((widget) => widget.projectId === project.id),
     [project.id, widgets],
@@ -57,27 +52,6 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
       active = false;
     };
   }, [supported]);
-
-  useEffect(() => {
-    if (!supported) return;
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        setExactUpdatesEnabled(canScheduleExactClockWidgetUpdates());
-      }
-    });
-    return () => subscription.remove();
-  }, [supported]);
-
-  const openExactUpdateSettings = async () => {
-    try {
-      await requestExactClockWidgetUpdatePermission();
-    } catch (error: unknown) {
-      showDialog({
-        title: "권한 설정을 열지 못했어요",
-        message: error instanceof Error ? error.message : "다시 시도해 주세요.",
-      });
-    }
-  };
 
   const runSavedAction = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -151,22 +125,6 @@ export const ClockWidgetSettings = ({ project, saveProject }: Props) => {
           ? `마지막 업데이트: ${new Date(latestUpdate).toLocaleString()}`
           : "아직 적용된 위젯이 없어요."}
       </AppText>
-      {!exactUpdatesEnabled ? (
-        <View style={styles.permission}>
-          <AppText variant="label">
-            위젯 시간이 멈추지 않게 설정해 주세요
-          </AppText>
-          <AppText tone="secondary">
-            Android의 ‘알람 및 리마인더’ 권한이 있어야 앱을 닫은 뒤에도 커스텀
-            시계 이미지를 매분 다시 그릴 수 있어요.
-          </AppText>
-          <AppButton
-            label="정확한 시간 갱신 허용"
-            onPress={() => void openExactUpdateSettings()}
-            variant="secondary"
-          />
-        </View>
-      ) : null}
       {projectWidgets.map((widget, index) => (
         <AppText key={widget.appWidgetId} tone="secondary">
           위젯 {index + 1} · {widget.width ?? "?"}×{widget.height ?? "?"} · 정상

@@ -34,9 +34,15 @@ export const styles = StyleSheet.create({
   toolbar: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
+    bottom: spacing.md,
+    elevation: 20,
     flexGrow: 0,
     flexShrink: 0,
+    left: spacing.lg,
     minHeight: 230,
+    position: "absolute",
+    right: spacing.lg,
+    zIndex: 1000,
     borderColor: "rgba(255,255,255,0.9)",
     borderWidth: 1,
     ...shadows.card,
@@ -56,11 +62,15 @@ export const styles = StyleSheet.create({
   },
   tabScroller: {
     flexGrow: 0,
+    flexShrink: 0,
+    height: 84,
   },
   tabs: {
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
   },
   panel: {
     gap: spacing.md,

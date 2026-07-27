@@ -11,7 +11,7 @@
 | `android.permission.RECEIVE_BOOT_COMPLETED`                 | clock-widget 모듈             | 재부팅 후 홈 위젯 갱신 예약 복원                               | 없음        | 유지      |
 | `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | AndroidX                      | 내보내지 않은 동적 receiver 보호용 signature 권한              | 없음        | 자동 생성 |
 
-카메라, 마이크, 광범위한 사진/저장소, 알림, 정확한 알람, 위치, 연락처, 광고 ID, 다른 앱 목록 조회 권한은 사용하지 않는다. `app.json`의 `blockedPermissions`와 main manifest의 `tools:node="remove"`로 dependency 병합 시 재유입도 차단한다.
+카메라, 마이크, 광범위한 사진/저장소, 알림, 위치, 연락처, 광고 ID, 다른 앱 목록 조회 권한은 사용하지 않는다. 커스텀 홈 시계 위젯을 앱 종료 후에도 매분 갱신하기 위해 사용자 승인형 `SCHEDULE_EXACT_ALARM`만 사용한다. 그 외 권한은 `app.json`의 `blockedPermissions`와 main manifest의 `tools:node="remove"`로 dependency 병합 시 재유입도 차단한다.
 
 ## 사진 선택 흐름
 
