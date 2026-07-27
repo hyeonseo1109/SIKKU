@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  useFocusEffect,
+  useIsFocused,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import { ScrollView, View } from "react-native";
 
 import type { ClockLayer, ClockLayerTransform } from "@/entities/clock-layer";
@@ -11,7 +16,7 @@ import {
   resolveCanvasShadow,
   useClockProjectStore,
 } from "@/entities/clock-project";
-import type { ClockCanvasShadow } from "@/entities/clock-project";
+import type { ClockCanvasShadow, ClockProject } from "@/entities/clock-project";
 import type {
   DigitValue,
   DigitalDisplayTransform,
@@ -105,8 +110,16 @@ const categoryForTarget = (target: ImageTarget) => {
   return "decoration" as const;
 };
 
+const persistProjectSnapshot = async (project: ClockProject) => {
+  await clockProjectRepository.update(project);
+  if (isClockWidgetSupported()) {
+    await updateClockWidgets(project);
+  }
+};
+
 export const EditorPage = () => {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
+  const isFocused = useIsFocused();
   const router = useRouter();
   const { showDialog } = useAppDialog();
   const project = useClockProjectStore((state) => state.project);
@@ -137,9 +150,14 @@ export const EditorPage = () => {
     panelHeight,
     resizeHandlePanHandlers,
   } = useResizableEditorPanel();
-  const mountedProjectId = useRef<string | null>(null);
+  const panelScrollRef = useRef<ScrollView>(null);
   const canvasSnapshotRef = useRef<View>(null);
   const saveInFlightRef = useRef<Promise<boolean> | null>(null);
+
+  const handleAnchorDragStateChange = useCallback((dragging: boolean) => {
+    setAnchorDragging(dragging);
+    panelScrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
+  }, []);
 
   const saveEditorProject = useCallback((): Promise<boolean> => {
     if (saveInFlightRef.current) return saveInFlightRef.current;
@@ -192,6 +210,8 @@ export const EditorPage = () => {
   }, [replaceProjectWithoutHistory, save]);
 
   useEffect(() => {
+    if (!isFocused) return;
+
     let active = true;
     const load = projectId
       ? clockProjectRepository.getById(projectId)
@@ -200,7 +220,6 @@ export const EditorPage = () => {
       .then((loaded) => {
         if (active) {
           setProject(loaded);
-          mountedProjectId.current = projectId ?? null;
           setLoading(false);
         }
       })
@@ -218,33 +237,35 @@ export const EditorPage = () => {
     return () => {
       active = false;
     };
-  }, [project?.id, projectId, setProject, showDialog]);
+  }, [isFocused, projectId, setProject, showDialog]);
 
   useEffect(() => {
-    if (saveStatus !== "dirty") return;
+    if (!isFocused || saveStatus !== "dirty" || project?.id !== projectId)
+      return;
     const timer = setTimeout(() => void saveEditorProject(), 2000);
     return () => clearTimeout(timer);
-  }, [project?.updatedAt, saveEditorProject, saveStatus]);
+  }, [
+    isFocused,
+    project?.id,
+    project?.updatedAt,
+    projectId,
+    saveEditorProject,
+    saveStatus,
+  ]);
 
-  useEffect(
-    () => () => {
-      const state = useClockProjectStore.getState();
-      if (
-        state.project?.id === mountedProjectId.current &&
-        state.saveStatus === "dirty"
-      ) {
-        const projectToSync = state.project;
-        void state.save().then((saved) => {
-          if (saved && isClockWidgetSupported()) {
-            return updateClockWidgets(projectToSync).catch((error: unknown) => {
-              console.error("[EditorPage] Failed to update widgets", error);
-            });
-          }
-        });
-      }
-      resetUi();
-    },
-    [resetUi],
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        const state = useClockProjectStore.getState();
+        if (state.project?.id === projectId && state.saveStatus === "dirty") {
+          const projectToSync = state.project;
+          void persistProjectSnapshot(projectToSync).catch((error: unknown) => {
+            console.error("[EditorPage] Failed to save blurred project", error);
+          });
+        }
+        resetUi();
+      };
+    }, [projectId, resetUi]),
   );
 
   const chooseImage = useCallback(
@@ -633,6 +654,7 @@ export const EditorPage = () => {
           disableScrollViewPanResponder={anchorDragging}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={false}
+          ref={panelScrollRef}
           scrollEnabled={!anchorDragging}
         >
           {activeTab === "background" ? (
@@ -986,7 +1008,7 @@ export const EditorPage = () => {
                 <AnalogAnchorEditor
                   key={`${selectedLayer.id}-${selectedLayer.imageUri}`}
                   layer={selectedLayer}
-                  onDragStateChange={setAnchorDragging}
+                  onDragStateChange={handleAnchorDragStateChange}
                   onCommit={({ pivotX, pivotY, tipX, tipY }) =>
                     updateLayerTransform(selectedLayer.id, {
                       ...selectedLayer.transform,

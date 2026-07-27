@@ -34,8 +34,8 @@ export const styles = StyleSheet.create({
     width: 18,
   },
   pivotMarker: {
-    backgroundColor: colors.accent,
-    borderColor: colors.primary,
+    backgroundColor: "#FF6B9A",
+    borderColor: "#A61B4D",
   },
   tipMarker: {
     backgroundColor: "#55C4BF",
