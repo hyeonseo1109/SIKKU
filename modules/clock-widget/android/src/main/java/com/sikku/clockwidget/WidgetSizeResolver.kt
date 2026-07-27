@@ -90,7 +90,7 @@ class WidgetSizeResolver(private val context: Context) {
   }
 
   companion object {
-    const val MAX_DIMENSION = 2048
+    const val MAX_DIMENSION = 1024
     private const val MAX_EXACT_SIZES = 16
     private const val DEFAULT_SIZE_DP = 180
   }

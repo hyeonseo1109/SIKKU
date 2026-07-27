@@ -9,9 +9,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
-import android.os.Build
 import android.util.Log
-import android.util.SizeF
 import android.widget.RemoteViews
 import com.sikku.clockwidget.model.NativeWidgetConfig
 import com.sikku.clockwidget.model.WidgetSize
@@ -31,7 +29,7 @@ class ClockWidgetUpdater(
   fun update(appWidgetId: Int) {
     lockFor(appWidgetId).withLock {
       val manager = AppWidgetManager.getInstance(context)
-      val sizes = sizeResolver.resolveAll(manager, appWidgetId)
+      val size = sizeResolver.resolve(manager, appWidgetId)
       val stored = repository.get(appWidgetId)
       val parsedConfig = stored?.let {
         runCatching { parser.parse(it.configJson) }
@@ -45,8 +43,8 @@ class ClockWidgetUpdater(
         parsedConfig == null -> "시계를 불러오지 못했어요"
         else -> null
       }
-      val views = createResponsiveRemoteViews(
-        sizes = sizes,
+      val views = createRemoteViewsForSize(
+        size = size,
         config = parsedConfig,
         fallbackMessage = fallbackMessage,
         projectId = parsedConfig?.projectId ?: stored?.projectId,
@@ -60,6 +58,8 @@ class ClockWidgetUpdater(
     EXECUTOR.execute {
       try {
         update(appWidgetId)
+      } catch (error: Throwable) {
+        Log.e(TAG, "Widget $appWidgetId update failed", error)
       } finally {
         onComplete?.invoke()
       }
@@ -74,7 +74,12 @@ class ClockWidgetUpdater(
     }
     EXECUTOR.execute {
       try {
-        ids.forEach(::update)
+        ids.forEach { appWidgetId ->
+          runCatching { update(appWidgetId) }
+            .onFailure { error ->
+              Log.e(TAG, "Widget $appWidgetId update failed", error)
+            }
+        }
       } finally {
         onComplete?.invoke()
       }
@@ -91,31 +96,6 @@ class ClockWidgetUpdater(
       R.id.clock_widget_image,
       createOpenAppIntent(projectId, appWidgetId),
     )
-  }
-
-  private fun createResponsiveRemoteViews(
-    sizes: List<WidgetSizeResolver.ResolvedSize>,
-    config: NativeWidgetConfig?,
-    fallbackMessage: String?,
-    projectId: String?,
-    appWidgetId: Int,
-  ): RemoteViews {
-    val viewsBySize = sizes.associate { size ->
-      size.dpSize to createRemoteViewsForSize(
-        size = size.pixelSize,
-        config = config,
-        fallbackMessage = fallbackMessage,
-        projectId = projectId,
-        appWidgetId = appWidgetId,
-      )
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-      viewsBySize.keys.all { it != null }
-    ) {
-      @Suppress("UNCHECKED_CAST")
-      return RemoteViews(viewsBySize as Map<SizeF, RemoteViews>)
-    }
-    return viewsBySize.values.first()
   }
 
   private fun createRemoteViewsForSize(

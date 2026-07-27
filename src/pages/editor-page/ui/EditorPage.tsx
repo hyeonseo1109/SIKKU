@@ -141,7 +141,9 @@ export const EditorPage = () => {
   const setActiveTab = useEditorUiStore((state) => state.setActiveTab);
   const resetUi = useEditorUiStore((state) => state.reset);
   const setPending = usePendingImageStore((state) => state.setPending);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => useClockProjectStore.getState().project?.id !== projectId,
+  );
   const [anchorDragging, setAnchorDragging] = useState(false);
   const [capturingPreview, setCapturingPreview] = useState(false);
   const {
@@ -211,6 +213,7 @@ export const EditorPage = () => {
 
   useEffect(() => {
     if (!isFocused) return;
+    if (useClockProjectStore.getState().project?.id === projectId) return;
 
     let active = true;
     const load = projectId
