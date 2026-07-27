@@ -16,4 +16,12 @@ export const styles = StyleSheet.create({
   action: {
     flex: 1,
   },
+  permission: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
 });

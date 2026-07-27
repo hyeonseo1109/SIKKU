@@ -98,6 +98,9 @@ export const AnalogAnchorEditor = ({
         onLayout={(event: LayoutChangeEvent) =>
           setFrameWidth(event.nativeEvent.layout.width)
         }
+        onTouchCancel={() => onDragStateChange?.(false)}
+        onTouchEnd={() => onDragStateChange?.(false)}
+        onTouchStart={() => onDragStateChange?.(true)}
         style={styles.previewFrame}
       >
         <View

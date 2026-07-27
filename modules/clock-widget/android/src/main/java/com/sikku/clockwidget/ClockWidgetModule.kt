@@ -1,11 +1,14 @@
 package com.sikku.clockwidget
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -15,6 +18,24 @@ class ClockWidgetModule : Module() {
 
     Function("isSupported") {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+    }
+
+    Function("canScheduleExactUpdates") {
+      ClockWidgetDependencies.scheduler(requireContext()).canScheduleExactUpdates()
+    }
+
+    AsyncFunction("requestExactUpdatePermission") {
+      val context = requireContext()
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+        !context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+      ) {
+        context.startActivity(
+          Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          },
+        )
+      }
     }
 
     AsyncFunction("requestPinWidget") { projectId: String, configJson: String ->
@@ -53,6 +74,7 @@ class ClockWidgetModule : Module() {
       ClockWidgetDependencies.parser(context).parse(configJson)
       ClockWidgetDependencies.repository(context).save(appWidgetId, configJson)
       ClockWidgetDependencies.updater(context).update(appWidgetId)
+      ClockWidgetDependencies.scheduler(context).scheduleNextMinute()
     }
 
     AsyncFunction("updateWidget") { appWidgetId: Int, configJson: String? ->
@@ -62,6 +84,7 @@ class ClockWidgetModule : Module() {
         ClockWidgetDependencies.repository(context).save(appWidgetId, configJson)
       }
       ClockWidgetDependencies.updater(context).update(appWidgetId)
+      ClockWidgetDependencies.scheduler(context).scheduleNextMinute()
     }
 
     AsyncFunction("updateProjectWidgets") { projectId: String, configJson: String ->
@@ -76,6 +99,7 @@ class ClockWidgetModule : Module() {
         repository.save(id, configJson)
         ClockWidgetDependencies.updater(context).update(id)
       }
+      ClockWidgetDependencies.scheduler(context).scheduleNextMinute()
       ids
     }
 

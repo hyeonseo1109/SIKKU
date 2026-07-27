@@ -22,6 +22,10 @@ const requireModule = (): ClockWidgetNativeModule => {
 
 export const clockWidgetNative: ClockWidgetNativeModule = {
   isSupported: () => nativeModule?.isSupported() ?? false,
+  canScheduleExactUpdates: () =>
+    nativeModule?.canScheduleExactUpdates() ?? false,
+  requestExactUpdatePermission: () =>
+    requireModule().requestExactUpdatePermission(),
   requestPinWidget: (projectId, configJson) =>
     requireModule().requestPinWidget(projectId, configJson),
   saveWidgetConfig: (appWidgetId, configJson) =>

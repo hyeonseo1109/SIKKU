@@ -50,6 +50,7 @@ import {
 } from "@/widgets/clock-widget-settings";
 import { DigitalSlotEditor } from "@/widgets/digital-slot-editor";
 
+import { useResizableEditorPanel } from "../lib/use-resizable-editor-panel";
 import { styles } from "./EditorPage.styles";
 
 const TABS: { key: EditorTab; label: string }[] = [
@@ -130,6 +131,12 @@ export const EditorPage = () => {
   const [loading, setLoading] = useState(true);
   const [anchorDragging, setAnchorDragging] = useState(false);
   const [capturingPreview, setCapturingPreview] = useState(false);
+  const {
+    decreasePanelHeight,
+    increasePanelHeight,
+    panelHeight,
+    resizeHandlePanHandlers,
+  } = useResizableEditorPanel();
   const mountedProjectId = useRef<string | null>(null);
   const canvasSnapshotRef = useRef<View>(null);
   const saveInFlightRef = useRef<Promise<boolean> | null>(null);
@@ -581,7 +588,28 @@ export const EditorPage = () => {
         snapshotRef={canvasSnapshotRef}
       />
 
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, { height: panelHeight }]}>
+        <View
+          accessibilityActions={[
+            { name: "increment", label: "편집 영역 크게" },
+            { name: "decrement", label: "편집 영역 작게" },
+          ]}
+          accessibilityHint="위아래로 드래그해 편집 영역 높이를 조절합니다."
+          accessibilityLabel="편집 영역 크기 조절"
+          accessibilityRole="adjustable"
+          onAccessibilityAction={(event) => {
+            if (event.nativeEvent.actionName === "increment") {
+              increasePanelHeight();
+            } else if (event.nativeEvent.actionName === "decrement") {
+              decreasePanelHeight();
+            }
+          }}
+          style={styles.resizeHandle}
+          {...resizeHandlePanHandlers}
+        >
+          <View style={styles.resizeHandleBar} />
+          <AppText tone="secondary">위아래로 드래그해 편집 영역 조절</AppText>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -602,7 +630,9 @@ export const EditorPage = () => {
 
         <ScrollView
           contentContainerStyle={styles.panel}
+          disableScrollViewPanResponder={anchorDragging}
           keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={false}
           scrollEnabled={!anchorDragging}
         >
           {activeTab === "background" ? (

@@ -34,11 +34,25 @@ export const styles = StyleSheet.create({
   toolbar: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 0,
     minHeight: 230,
     borderColor: "rgba(255,255,255,0.9)",
     borderWidth: 1,
     ...shadows.card,
+  },
+  resizeHandle: {
+    alignItems: "center",
+    gap: spacing.xs,
+    minHeight: 54,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  resizeHandleBar: {
+    backgroundColor: colors.border,
+    borderRadius: radius.full,
+    height: 5,
+    width: 64,
   },
   tabScroller: {
     flexGrow: 0,

@@ -1,4 +1,3 @@
-import { useFonts } from "expo-font";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -11,12 +10,6 @@ const stackScreenOptions = {
 } as const;
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    NoonnuBasicGothicRegular: require("../../public/fonts/NoonnuBasicGothicRegular.ttf"),
-  });
-
-  if (!fontsLoaded && !fontError) return null;
-
   return (
     <GestureHandlerRootView style={styles.root}>
       <AppErrorBoundary>

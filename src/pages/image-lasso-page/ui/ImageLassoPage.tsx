@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Image } from "expo-image";
+import { File } from "expo-file-system";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
 
@@ -6,6 +8,7 @@ import {
   projectAssetRepository,
   useClockProjectStore,
 } from "@/entities/clock-project";
+import type { ImageAsset } from "@/entities/image-asset";
 import {
   createAutoBackgroundPng,
   createAutoBackgroundPngFromBytes,
@@ -20,6 +23,11 @@ import { ImageLassoEditor } from "@/widgets/image-lasso-editor";
 
 import { styles } from "./ImageLassoPage.styles";
 
+const deleteFile = (uri: string) => {
+  const file = new File(uri);
+  if (file.exists) file.delete();
+};
+
 export const ImageLassoPage = () => {
   const router = useRouter();
   const { showDialog } = useAppDialog();
@@ -33,6 +41,12 @@ export const ImageLassoPage = () => {
   const reset = useImageLassoStore((state) => state.reset);
   const [size, setSize] = useState<Size>({ width: 1, height: 1 });
   const [applying, setApplying] = useState(false);
+  const [workingAsset, setWorkingAsset] = useState<ImageAsset | null>(
+    pending?.asset ?? null,
+  );
+  const [previewAsset, setPreviewAsset] = useState<ImageAsset | null>(null);
+  const temporaryUris = useRef(new Set<string>());
+  const committedUri = useRef<string | null>(null);
 
   useEffect(() => {
     restore(
@@ -40,9 +54,20 @@ export const ImageLassoPage = () => {
         (pending?.asset.lassoPoints ? [pending.asset.lassoPoints] : []),
     );
     return () => reset();
-  }, [pending?.asset.lassoPoints, pending?.asset.lassoRegions, reset, restore]);
+  }, [pending?.asset, reset, restore]);
+
+  useEffect(
+    () => () => {
+      temporaryUris.current.forEach((uri) => {
+        if (uri !== committedUri.current) deleteFile(uri);
+      });
+    },
+    [],
+  );
 
   const cancel = async () => {
+    temporaryUris.current.forEach(deleteFile);
+    temporaryUris.current.clear();
     if (
       pending &&
       !project?.assets.some((asset) => asset.id === pending.asset.id)
@@ -57,7 +82,12 @@ export const ImageLassoPage = () => {
   };
 
   const apply = async () => {
-    if (!pending || !project || pending.projectId !== project.id) {
+    if (
+      !pending ||
+      !project ||
+      !workingAsset ||
+      pending.projectId !== project.id
+    ) {
       showDialog({
         title: "편집 정보 없음",
         message: "이미지를 다시 선택해 주세요.",
@@ -74,7 +104,7 @@ export const ImageLassoPage = () => {
 
     setApplying(true);
     try {
-      const cropped = await createLassoPng(pending.asset, regions);
+      const cropped = await createLassoPng(workingAsset, regions);
       const saved = await projectAssetRepository.saveProcessedImage(
         project.id,
         pending.asset,
@@ -85,15 +115,13 @@ export const ImageLassoPage = () => {
         ...saved,
         width: cropped.width,
         height: cropped.height,
+        originalUri: pending.asset.originalUri,
         originalWidth: pending.asset.originalWidth ?? pending.asset.width,
         originalHeight: pending.asset.originalHeight ?? pending.asset.height,
         cropBounds: cropped.cropBounds,
       };
-      changeProject((current) =>
-        applyImageAsset(current, processed, pending.target),
-      );
-      clearPending();
-      router.back();
+      temporaryUris.current.add(processed.processedUri);
+      setPreviewAsset(processed);
     } catch (error: unknown) {
       console.error("[ImageLasso] Failed to apply mask", error);
       showDialog({
@@ -109,7 +137,12 @@ export const ImageLassoPage = () => {
   };
 
   const applyAutoBackgroundRemoval = async () => {
-    if (!pending || !project || pending.projectId !== project.id) {
+    if (
+      !pending ||
+      !project ||
+      !workingAsset ||
+      pending.projectId !== project.id
+    ) {
       showDialog({
         title: "편집 정보 없음",
         message: "이미지를 다시 선택해 주세요.",
@@ -120,11 +153,11 @@ export const ImageLassoPage = () => {
     try {
       const hasSelection = regions.some(isValidPolygon);
       const cropped = hasSelection
-        ? await createLassoPng(pending.asset, regions)
+        ? await createLassoPng(workingAsset, regions)
         : null;
       const bytes = cropped
         ? createAutoBackgroundPngFromBytes(cropped.bytes)
-        : await createAutoBackgroundPng(pending.asset);
+        : await createAutoBackgroundPng(workingAsset);
       const saved = await projectAssetRepository.saveProcessedImage(
         project.id,
         pending.asset,
@@ -137,6 +170,7 @@ export const ImageLassoPage = () => {
             ...saved,
             width: cropped.width,
             height: cropped.height,
+            originalUri: pending.asset.originalUri,
             originalWidth: pending.asset.originalWidth ?? pending.asset.width,
             originalHeight:
               pending.asset.originalHeight ?? pending.asset.height,
@@ -144,15 +178,16 @@ export const ImageLassoPage = () => {
           }
         : {
             ...saved,
-            width: pending.asset.originalWidth ?? pending.asset.width,
-            height: pending.asset.originalHeight ?? pending.asset.height,
+            width: workingAsset.width,
+            height: workingAsset.height,
+            originalUri: pending.asset.originalUri,
+            originalWidth: pending.asset.originalWidth ?? pending.asset.width,
+            originalHeight:
+              pending.asset.originalHeight ?? pending.asset.height,
             cropBounds: undefined,
           };
-      changeProject((current) =>
-        applyImageAsset(current, processed, pending.target),
-      );
-      clearPending();
-      router.back();
+      temporaryUris.current.add(processed.processedUri);
+      setPreviewAsset(processed);
     } catch (error: unknown) {
       console.error("[AutoBackground] Failed to remove background", error);
       showDialog({
@@ -164,12 +199,75 @@ export const ImageLassoPage = () => {
     }
   };
 
+  const continueEditing = () => {
+    if (!previewAsset) return;
+    setWorkingAsset({
+      ...previewAsset,
+      originalUri: previewAsset.processedUri,
+      originalWidth: previewAsset.width,
+      originalHeight: previewAsset.height,
+      cropBounds: undefined,
+      lassoPoints: undefined,
+      lassoRegions: undefined,
+    });
+    setPreviewAsset(null);
+    reset();
+  };
+
+  const confirmPreview = () => {
+    if (!pending || !previewAsset) return;
+    changeProject((current) =>
+      applyImageAsset(current, previewAsset, pending.target),
+    );
+    committedUri.current = previewAsset.processedUri;
+    temporaryUris.current.forEach((uri) => {
+      if (uri !== previewAsset.processedUri) deleteFile(uri);
+    });
+    temporaryUris.current.clear();
+    clearPending();
+    router.back();
+  };
+
   if (!pending) {
     return (
       <AppScreen>
         <View style={styles.missing}>
           <AppText variant="heading">편집할 이미지가 없어요</AppText>
           <AppButton label="돌아가기" onPress={() => router.back()} />
+        </View>
+      </AppScreen>
+    );
+  }
+
+  if (previewAsset) {
+    return (
+      <AppScreen>
+        <View style={styles.header}>
+          <AppText variant="heading">편집 결과 확인</AppText>
+          <AppText tone="secondary">
+            이 상태로 이미지를 사용하거나, 결과를 바탕으로 한 번 더 편집할 수
+            있어요.
+          </AppText>
+        </View>
+        <View style={styles.preview}>
+          <Image
+            accessibilityLabel="최종 편집 이미지 미리보기"
+            contentFit="contain"
+            source={previewAsset.processedUri}
+            style={styles.previewImage}
+          />
+        </View>
+        <View style={styles.previewActions}>
+          <View style={styles.action}>
+            <AppButton
+              label="추가 편집"
+              onPress={continueEditing}
+              variant="secondary"
+            />
+          </View>
+          <View style={styles.action}>
+            <AppButton label="이 이미지 사용" onPress={confirmPreview} />
+          </View>
         </View>
       </AppScreen>
     );
@@ -187,7 +285,7 @@ export const ImageLassoPage = () => {
 
       <View style={styles.editor}>
         <ImageLassoEditor
-          asset={pending.asset}
+          asset={workingAsset ?? pending.asset}
           onLayout={(event) =>
             setSize({
               width: event.nativeEvent.layout.width,

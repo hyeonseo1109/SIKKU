@@ -8,6 +8,12 @@ import {
 
 export const isClockWidgetSupported = () => clockWidgetNative.isSupported();
 
+export const canScheduleExactClockWidgetUpdates = () =>
+  clockWidgetNative.canScheduleExactUpdates();
+
+export const requestExactClockWidgetUpdatePermission = () =>
+  clockWidgetNative.requestExactUpdatePermission();
+
 export const requestClockWidget = (
   project: ClockProject,
 ): Promise<PinWidgetResult> =>

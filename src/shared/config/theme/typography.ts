@@ -1,24 +1,22 @@
-import { fontFamilies } from "./fonts";
-
 export const typography = {
   body: {
-    fontFamily: fontFamilies.regular,
     fontSize: 15,
+    fontWeight: "400",
     lineHeight: 23,
   },
   label: {
-    fontFamily: fontFamilies.bold,
     fontSize: 14,
+    fontWeight: "700",
     lineHeight: 20,
   },
   title: {
-    fontFamily: fontFamilies.display,
     fontSize: 30,
+    fontWeight: "700",
     lineHeight: 38,
   },
   heading: {
-    fontFamily: fontFamilies.bold,
     fontSize: 22,
+    fontWeight: "700",
     lineHeight: 30,
   },
 } as const;

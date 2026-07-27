@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 
 class WidgetUpdateScheduler(private val context: Context) {
   fun scheduleNextMinute() {
@@ -13,12 +14,22 @@ class WidgetUpdateScheduler(private val context: Context) {
     }
     val nextMinute = ClockMath.nextMinuteAfter(System.currentTimeMillis())
     val alarmManager = context.getSystemService(AlarmManager::class.java)
-    alarmManager.setAndAllowWhileIdle(
-      AlarmManager.RTC_WAKEUP,
-      nextMinute,
-      pendingIntent(),
-    )
+    if (canScheduleExactUpdates(alarmManager)) {
+      // A non-wakeup exact alarm keeps the visible widget minute-accurate without
+      // waking a sleeping device. An overdue alarm is delivered when it wakes.
+      alarmManager.setExact(AlarmManager.RTC, nextMinute, pendingIntent())
+    } else {
+      alarmManager.setWindow(
+        AlarmManager.RTC,
+        nextMinute,
+        FALLBACK_WINDOW_MILLIS,
+        pendingIntent(),
+      )
+    }
   }
+
+  fun canScheduleExactUpdates(): Boolean =
+    canScheduleExactUpdates(context.getSystemService(AlarmManager::class.java))
 
   fun cancel() {
     context.getSystemService(AlarmManager::class.java).cancel(pendingIntent())
@@ -33,6 +44,11 @@ class WidgetUpdateScheduler(private val context: Context) {
     )
 
   companion object {
+    private const val FALLBACK_WINDOW_MILLIS = 60_000L
     private const val REQUEST_CODE = 9417
+
+    private fun canScheduleExactUpdates(alarmManager: AlarmManager): Boolean =
+      Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        alarmManager.canScheduleExactAlarms()
   }
 }

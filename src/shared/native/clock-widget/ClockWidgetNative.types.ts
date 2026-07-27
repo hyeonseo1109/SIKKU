@@ -14,6 +14,8 @@ export type PinWidgetResult =
 
 export type ClockWidgetNativeModule = {
   isSupported: () => boolean;
+  canScheduleExactUpdates: () => boolean;
+  requestExactUpdatePermission: () => Promise<void>;
   requestPinWidget: (
     projectId: string,
     configJson: string,

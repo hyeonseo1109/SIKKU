@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, fontFamilies, radius, spacing } from "@/shared/config/theme";
+import { colors, radius, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
   stage: {
@@ -94,7 +94,7 @@ export const styles = StyleSheet.create({
   },
   digitalSlotFallback: {
     color: colors.textPrimary,
-    fontFamily: fontFamilies.bold,
+    fontWeight: "700",
     textAlign: "center",
   },
   digitalRow: {
@@ -117,7 +117,7 @@ export const styles = StyleSheet.create({
   },
   digitFallback: {
     color: colors.textPrimary,
-    fontFamily: fontFamilies.bold,
+    fontWeight: "700",
     fontSize: 36,
     fontVariant: ["tabular-nums"],
   },

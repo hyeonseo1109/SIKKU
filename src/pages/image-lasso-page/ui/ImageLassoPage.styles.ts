@@ -14,6 +14,26 @@ export const styles = StyleSheet.create({
     flex: 1,
     marginBottom: spacing.md,
   },
+  preview: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    marginBottom: spacing.md,
+    overflow: "hidden",
+    padding: spacing.md,
+  },
+  previewImage: {
+    height: "100%",
+    width: "100%",
+  },
+  previewActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
