@@ -8,6 +8,8 @@ import android.util.SizeF
 import com.sikku.clockwidget.model.NativeCanvasConfig
 import com.sikku.clockwidget.model.WidgetSize
 import com.sikku.clockwidget.model.WidgetViewport
+import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -78,7 +80,15 @@ class WidgetSizeResolver(private val context: Context) {
   }
 
   fun contain(canvas: NativeCanvasConfig, output: WidgetSize): WidgetViewport {
-    val scale = min(output.width / canvas.width, output.height / canvas.height)
+    val shadowPadding = if (canvas.shadow.enabled) {
+      canvas.shadow.blur + max(abs(canvas.shadow.offsetX), abs(canvas.shadow.offsetY))
+    } else {
+      0f
+    }
+    val scale = min(
+      output.width / (canvas.width + shadowPadding * 2f),
+      output.height / (canvas.height + shadowPadding * 2f),
+    )
     val width = canvas.width * scale
     val height = canvas.height * scale
     return WidgetViewport(

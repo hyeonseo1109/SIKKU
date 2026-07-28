@@ -21,9 +21,24 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
   },
-  glassHighlight: {
-    backgroundColor: "rgba(255,255,255,0.22)",
-    height: "38%",
+  glassTarget: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 0,
+  },
+  glassBlur: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 1,
+  },
+  glassTint: {
+    bottom: 0,
     left: 0,
     position: "absolute",
     right: 0,

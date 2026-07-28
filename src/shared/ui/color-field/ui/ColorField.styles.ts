@@ -30,20 +30,25 @@ export const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },
-  swatches: {
+  picker: {
+    alignItems: "stretch",
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: spacing.sm,
   },
-  swatch: {
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    borderWidth: 2,
-    height: 34,
-    width: 34,
+  canvas: {
+    height: "100%",
+    width: "100%",
   },
-  swatchSelected: {
-    borderColor: colors.textPrimary,
-    borderWidth: 3,
+  saturationPicker: {
+    borderRadius: radius.md,
+    flex: 1,
+    height: 148,
+    overflow: "hidden",
+  },
+  huePicker: {
+    borderRadius: radius.full,
+    height: 148,
+    overflow: "hidden",
+    width: 30,
   },
 });

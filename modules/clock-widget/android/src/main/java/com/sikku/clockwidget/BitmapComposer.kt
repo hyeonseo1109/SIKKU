@@ -80,36 +80,23 @@ class BitmapComposer(
         val imagePaint = Paint(IMAGE_PAINT).apply {
           alpha = (config.backgroundImageOpacity.coerceIn(0f, 1f) * 255f).roundToInt()
         }
-        canvas.drawBitmap(
-          bitmap,
-          centerCropSource(bitmap, destination),
-          destination,
-          imagePaint,
-        )
+        if (config.appearance == "glass") {
+          canvas.drawBitmap(
+            blurForGlass(bitmap, centerCropSource(bitmap, destination), destination),
+            null,
+            destination,
+            imagePaint,
+          )
+        } else {
+          canvas.drawBitmap(
+            bitmap,
+            centerCropSource(bitmap, destination),
+            destination,
+            imagePaint,
+          )
+        }
         canvas.restoreToCount(checkpoint)
       }
-    }
-    if (config.appearance == "glass") {
-      val glassPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = (2f * viewport.width / config.width).coerceAtLeast(1f)
-        this.color = 0xC8FFFFFF.toInt()
-      }
-      canvas.drawRoundRect(destination, cornerRadius, cornerRadius, glassPaint)
-      val highlight = RectF(
-        destination.left + glassPaint.strokeWidth,
-        destination.top + glassPaint.strokeWidth,
-        destination.right - glassPaint.strokeWidth,
-        destination.top + destination.height() * 0.38f,
-      )
-      canvas.drawRoundRect(
-        highlight,
-        cornerRadius,
-        cornerRadius,
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-          this.color = 0x38FFFFFF
-        },
-      )
     }
   }
 
@@ -190,7 +177,89 @@ class BitmapComposer(
     })
   }
 
+  private fun canvasBounds(viewport: WidgetViewport) = RectF(
+    viewport.left,
+    viewport.top,
+    viewport.left + viewport.width,
+    viewport.top + viewport.height,
+  )
+
+  private fun withOpacity(color: Int, opacity: Float): Int {
+    val sourceAlpha = android.graphics.Color.alpha(color)
+    val alpha = (sourceAlpha * opacity.coerceIn(0f, 1f)).roundToInt()
+    return (color and 0x00FFFFFF) or (alpha shl 24)
+  }
+
+  private fun blurForGlass(bitmap: Bitmap, source: Rect, destination: RectF): Bitmap {
+    val width = (destination.width() / GLASS_DOWNSCALE).roundToInt().coerceAtLeast(1)
+    val height = (destination.height() / GLASS_DOWNSCALE).roundToInt().coerceAtLeast(1)
+    val reduced = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    Canvas(reduced).drawBitmap(
+      bitmap,
+      source,
+      RectF(0f, 0f, width.toFloat(), height.toFloat()),
+      IMAGE_PAINT,
+    )
+    val pixels = IntArray(width * height)
+    reduced.getPixels(pixels, 0, width, 0, 0, width, height)
+    val horizontal = boxBlur(pixels, width, height, GLASS_BLUR_RADIUS, true)
+    val vertical = boxBlur(horizontal, width, height, GLASS_BLUR_RADIUS, false)
+    reduced.setPixels(vertical, 0, width, 0, 0, width, height)
+    return reduced
+  }
+
+  private fun boxBlur(
+    input: IntArray,
+    width: Int,
+    height: Int,
+    radius: Int,
+    horizontal: Boolean,
+  ): IntArray {
+    val output = IntArray(input.size)
+    for (y in 0 until height) {
+      for (x in 0 until width) {
+        var alpha = 0
+        var red = 0
+        var green = 0
+        var blue = 0
+        var count = 0
+        for (offset in -radius..radius) {
+          val sampleX = if (horizontal) (x + offset).coerceIn(0, width - 1) else x
+          val sampleY = if (horizontal) y else (y + offset).coerceIn(0, height - 1)
+          val color = input[sampleY * width + sampleX]
+          alpha += android.graphics.Color.alpha(color)
+          red += android.graphics.Color.red(color)
+          green += android.graphics.Color.green(color)
+          blue += android.graphics.Color.blue(color)
+          count += 1
+        }
+        output[y * width + x] = android.graphics.Color.argb(
+          alpha / count,
+          red / count,
+          green / count,
+          blue / count,
+        )
+      }
+    }
+    return output
+  }
+
+  private fun canvasPath(
+    config: NativeCanvasConfig,
+    viewport: WidgetViewport,
+  ) = Path().apply {
+    val cornerRadius = config.cornerRadius * viewport.width / config.width
+    addRoundRect(
+      canvasBounds(viewport),
+      cornerRadius,
+      cornerRadius,
+      Path.Direction.CW,
+    )
+  }
+
   companion object {
+    private const val GLASS_DOWNSCALE = 6f
+    private const val GLASS_BLUR_RADIUS = 4
     private val IMAGE_PAINT = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
     internal fun centerCropSource(bitmap: Bitmap, destination: RectF): Rect {
@@ -206,31 +275,5 @@ class BitmapComposer(
         Rect(0, top, bitmap.width, top + cropHeight)
       }
     }
-  }
-
-  private fun canvasBounds(viewport: WidgetViewport) = RectF(
-    viewport.left,
-    viewport.top,
-    viewport.left + viewport.width,
-    viewport.top + viewport.height,
-  )
-
-  private fun withOpacity(color: Int, opacity: Float): Int {
-    val sourceAlpha = android.graphics.Color.alpha(color)
-    val alpha = (sourceAlpha * opacity.coerceIn(0f, 1f)).roundToInt()
-    return (color and 0x00FFFFFF) or (alpha shl 24)
-  }
-
-  private fun canvasPath(
-    config: NativeCanvasConfig,
-    viewport: WidgetViewport,
-  ) = Path().apply {
-    val cornerRadius = config.cornerRadius * viewport.width / config.width
-    addRoundRect(
-      canvasBounds(viewport),
-      cornerRadius,
-      cornerRadius,
-      Path.Direction.CW,
-    )
   }
 }

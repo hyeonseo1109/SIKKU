@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { BlurTargetView, BlurView } from "expo-blur";
 import type { LayoutChangeEvent } from "react-native";
 import { Image, Pressable, View } from "react-native";
 
@@ -22,7 +23,7 @@ import { styles } from "./ClockCanvas.styles";
 import { TransformableDigitalClock } from "./TransformableDigitalClock";
 import { TransformableLayer } from "./TransformableLayer";
 
-const MAX_CANVAS_HEIGHT = 390;
+const DEFAULT_MAX_CANVAS_HEIGHT = 390;
 const CENTER_CAP_SIZE = 12;
 const DIGITAL_SELECTION_PREFIX = "__digital_slot__:";
 const DEFAULT_HOUR_HAND_COLOR = "#18312E";
@@ -53,6 +54,7 @@ const getSelectedDigitalSlotId = (
 };
 
 export type ClockCanvasProps = {
+  maxHeight?: number;
   project: ClockProject;
   selectedLayerId: string | null;
   onSelectLayer: (layerId: string | null) => void;
@@ -65,6 +67,7 @@ export type ClockCanvasProps = {
 };
 
 export const ClockCanvas = ({
+  maxHeight = DEFAULT_MAX_CANVAS_HEIGHT,
   onSelectLayer,
   onTransformDigital,
   onTransformLayer,
@@ -73,6 +76,7 @@ export const ClockCanvas = ({
   snapshotRef,
 }: ClockCanvasProps) => {
   const [availableWidth, setAvailableWidth] = useState(0);
+  const blurTargetRef = useRef<View>(null);
   const isCurrentTime = project.analogConfig?.previewMode !== "custom";
   const liveDate = useCurrentTime(isCurrentTime);
   const previewDate = useMemo(() => {
@@ -92,25 +96,28 @@ export const ClockCanvas = ({
     return liveDate;
   }, [liveDate, project.analogConfig, project.type]);
 
+  const canvasShadow = resolveCanvasShadow(project.canvas);
+  const shadowEnabled = canvasShadow.enabled;
+  const shadowLogicalPadding = shadowEnabled
+    ? canvasShadow.blur +
+      Math.max(
+        Math.abs(canvasShadow.offsetX),
+        Math.abs(canvasShadow.offsetY),
+      )
+    : 0;
   const scale = getCanvasScale(
-    project.canvas.width,
-    project.canvas.height,
+    project.canvas.width + shadowLogicalPadding * 2,
+    project.canvas.height + shadowLogicalPadding * 2,
     availableWidth,
-    MAX_CANVAS_HEIGHT,
+    maxHeight,
   );
   const screenWidth = project.canvas.width * scale;
   const screenHeight = project.canvas.height * scale;
   const cornerRadius = resolveCanvasCornerRadius(project.canvas) * scale;
-  const canvasShadow = resolveCanvasShadow(project.canvas);
-  const shadowEnabled = canvasShadow.enabled;
   const shadowBlur = canvasShadow.blur * scale;
   const shadowOffsetX = canvasShadow.offsetX * scale;
   const shadowOffsetY = canvasShadow.offsetY * scale;
-  const shadowPadding = shadowEnabled
-    ? Math.ceil(
-        shadowBlur + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)),
-      )
-    : 0;
+  const shadowPadding = shadowLogicalPadding * scale;
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setAvailableWidth(event.nativeEvent.layout.width);
@@ -190,7 +197,10 @@ export const ClockCanvas = ({
   };
 
   return (
-    <View onLayout={handleLayout} style={styles.stage}>
+    <View
+      onLayout={handleLayout}
+      style={[styles.stage, { height: maxHeight, minHeight: maxHeight }]}
+    >
       {availableWidth > 0 ? (
         <View
           collapsable={false}
@@ -201,7 +211,9 @@ export const ClockCanvas = ({
             style={[
               styles.shadowFrame,
               {
-                backgroundColor: renderedBackgroundColor,
+                backgroundColor: isGlass
+                  ? "transparent"
+                  : renderedBackgroundColor,
                 borderRadius: cornerRadius,
                 boxShadow: shadowEnabled
                   ? [
@@ -228,13 +240,61 @@ export const ClockCanvas = ({
                   width: screenWidth,
                   height: screenHeight,
                   borderRadius: cornerRadius,
-                  backgroundColor: renderedBackgroundColor,
-                  borderColor: isGlass ? "rgba(255,255,255,0.76)" : undefined,
-                  borderWidth: isGlass ? Math.max(1, scale * 2) : 1,
+                  backgroundColor: isGlass
+                    ? "transparent"
+                    : renderedBackgroundColor,
+                  borderWidth: isGlass ? 0 : 1,
                 },
               ]}
             >
-              {project.canvas.backgroundImageUri ? (
+              {isGlass ? (
+                <>
+                  <BlurTargetView
+                    ref={blurTargetRef}
+                    style={[
+                      styles.glassTarget,
+                      {
+                        backgroundColor: renderedBackgroundColor,
+                        borderRadius: cornerRadius,
+                      },
+                    ]}
+                  >
+                    {project.canvas.backgroundImageUri ? (
+                      <Image
+                        resizeMode="cover"
+                        source={{ uri: project.canvas.backgroundImageUri }}
+                        style={[
+                          styles.backgroundImage,
+                          {
+                            borderRadius: cornerRadius,
+                            opacity: backgroundImageOpacity,
+                          },
+                        ]}
+                      />
+                    ) : null}
+                  </BlurTargetView>
+                  <BlurView
+                    blurMethod="dimezisBlurViewSdk31Plus"
+                    blurTarget={blurTargetRef}
+                    intensity={58}
+                    pointerEvents="none"
+                    style={styles.glassBlur}
+                    tint="systemUltraThinMaterial"
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.glassTint,
+                      {
+                        backgroundColor: withOpacity(
+                          project.canvas.backgroundColor,
+                          Math.min(backgroundOpacity, 0.24),
+                        ),
+                      },
+                    ]}
+                  />
+                </>
+              ) : project.canvas.backgroundImageUri ? (
                 <Image
                   resizeMode="cover"
                   source={{ uri: project.canvas.backgroundImageUri }}
@@ -243,18 +303,6 @@ export const ClockCanvas = ({
                     {
                       borderRadius: cornerRadius,
                       opacity: backgroundImageOpacity,
-                    },
-                  ]}
-                />
-              ) : null}
-              {isGlass ? (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.glassHighlight,
-                    {
-                      borderTopLeftRadius: cornerRadius,
-                      borderTopRightRadius: cornerRadius,
                     },
                   ]}
                 />

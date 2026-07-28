@@ -74,7 +74,8 @@ export const styles = StyleSheet.create({
   },
   panel: {
     gap: spacing.md,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
   controlGroup: {

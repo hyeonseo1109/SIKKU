@@ -72,14 +72,6 @@ const TABS: { key: EditorTab; label: string }[] = [
   { key: "layers", label: "레이어" },
   { key: "settings", label: "설정" },
 ];
-const BACKGROUNDS = [
-  "transparent",
-  "#FFFFFF",
-  "#FFF8F2",
-  "#F3E5D8",
-  "#1D1B1A",
-  "#BBD7EA",
-] as const;
 const DIGITS: DigitValue[] = [
   "0",
   "1",
@@ -101,18 +93,6 @@ const SEPARATORS: { label: string; value: DigitalSeparatorStyle }[] = [
   { label: "공백", value: "space" },
   { label: "없음", value: "none" },
 ];
-const EDITOR_COLORS = [
-  "#FFFFFF",
-  "#F3A58E",
-  "#F5C96A",
-  "#67B8B0",
-  "#315B7D",
-  "#8D6BC1",
-  "#D85F78",
-  "#18312E",
-  "#000000",
-] as const;
-
 const categoryForTarget = (target: ImageTarget) => {
   if (target.kind === "background") return "background" as const;
   if (target.kind === "digit") return "digits" as const;
@@ -161,6 +141,7 @@ export const EditorPage = () => {
     decreasePanelHeight,
     increasePanelHeight,
     panelHeight,
+    previewHeight,
     resizeHandlePanHandlers,
   } = useResizableEditorPanel();
   const panelScrollRef = useRef<ScrollView>(null);
@@ -615,6 +596,7 @@ export const EditorPage = () => {
       </View>
 
       <ClockCanvas
+        maxHeight={previewHeight}
         onSelectLayer={selectLayer}
         onTransformDigital={updateDigital}
         onTransformLayer={updateLayerTransform}
@@ -675,20 +657,20 @@ export const EditorPage = () => {
             <>
               <AppText variant="label">배경색</AppText>
               <View style={styles.wrapRow}>
-                {BACKGROUNDS.map((color) => (
-                  <AppButton
-                    key={color}
-                    label={color === "transparent" ? "투명" : color}
-                    onPress={() =>
-                      changeProject((current) => ({
-                        ...current,
-                        canvas: { ...current.canvas, backgroundColor: color },
-                      }))
-                    }
-                    selected={project.canvas.backgroundColor === color}
-                    variant="secondary"
-                  />
-                ))}
+                <AppButton
+                  label="투명 배경 사용"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      canvas: {
+                        ...current.canvas,
+                        backgroundColor: "transparent",
+                      },
+                    }))
+                  }
+                  selected={project.canvas.backgroundColor === "transparent"}
+                  variant="secondary"
+                />
               </View>
               <ColorField
                 label="배경색 직접 선택"
@@ -698,7 +680,6 @@ export const EditorPage = () => {
                     canvas: { ...current.canvas, backgroundColor: color },
                   }))
                 }
-                swatches={EDITOR_COLORS}
                 value={
                   project.canvas.backgroundColor === "transparent"
                     ? "#FFFFFF"
@@ -745,20 +726,8 @@ export const EditorPage = () => {
                             : current.canvas.backgroundColor,
                         backgroundColorOpacity: Math.min(
                           current.canvas.backgroundColorOpacity ?? 1,
-                          0.48,
+                          0.42,
                         ),
-                        cornerRadius: Math.max(
-                          resolveCanvasCornerRadius(current.canvas),
-                          28,
-                        ),
-                        shadow: {
-                          ...resolveCanvasShadow(current.canvas),
-                          enabled: true,
-                          color: "#315B7D",
-                          opacity: 0.18,
-                          blur: 24,
-                          offsetY: 10,
-                        },
                       },
                     }))
                   }
@@ -768,8 +737,7 @@ export const EditorPage = () => {
               </View>
               {project.canvas.appearance === "glass" ? (
                 <AppText tone="secondary">
-                  반투명 색상, 밝은 테두리와 하이라이트를 겹쳐 iOS 글래스 느낌을
-                  만들어요.
+                  배경을 부드럽게 흐리게 처리하고 반투명 색상을 입혀요.
                 </AppText>
               ) : null}
               <AppText variant="label">배경 박스 모양</AppText>
@@ -834,7 +802,6 @@ export const EditorPage = () => {
                     onChange={(color) =>
                       updateCanvasShadow((shadow) => ({ ...shadow, color }))
                     }
-                    swatches={EDITOR_COLORS}
                     value={canvasShadow.color}
                   />
                   <View style={styles.wrapRow}>
@@ -1061,7 +1028,6 @@ export const EditorPage = () => {
                       };
                     })
                   }
-                  swatches={EDITOR_COLORS}
                   value={project.analogConfig?.hourHandColor ?? "#18312E"}
                 />
                 <OpacityControl
@@ -1105,7 +1071,6 @@ export const EditorPage = () => {
                       };
                     })
                   }
-                  swatches={EDITOR_COLORS}
                   value={project.analogConfig?.minuteHandColor ?? "#2F6F68"}
                 />
                 <OpacityControl
@@ -1141,7 +1106,6 @@ export const EditorPage = () => {
                         : undefined,
                     }))
                   }
-                  swatches={EDITOR_COLORS}
                   value={project.analogConfig?.centerCapColor ?? "#F3A58E"}
                 />
               </View>
@@ -1351,7 +1315,6 @@ export const EditorPage = () => {
                         : undefined,
                     }))
                   }
-                  swatches={EDITOR_COLORS}
                   value={project.digitalConfig.digitColor ?? "#18312E"}
                 />
                 <OpacityControl

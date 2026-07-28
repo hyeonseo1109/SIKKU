@@ -6,6 +6,9 @@ import { clamp } from "@/shared/lib/geometry";
 const MIN_PANEL_HEIGHT = 230;
 const DEFAULT_PANEL_HEIGHT = 280;
 const RESERVED_SCREEN_HEIGHT = 370;
+const RESERVED_PREVIEW_SURROUNDINGS = 240;
+const MIN_PREVIEW_HEIGHT = 110;
+const MAX_PREVIEW_HEIGHT = 390;
 const PANEL_STEP = 56;
 
 export const useResizableEditorPanel = () => {
@@ -21,6 +24,11 @@ export const useResizableEditorPanel = () => {
     panelHeight,
     MIN_PANEL_HEIGHT,
     maxPanelHeight,
+  );
+  const previewHeight = clamp(
+    screenHeight - visiblePanelHeight - RESERVED_PREVIEW_SURROUNDINGS,
+    MIN_PREVIEW_HEIGHT,
+    MAX_PREVIEW_HEIGHT,
   );
 
   const resizeBy = (amount: number) => {
@@ -51,6 +59,7 @@ export const useResizableEditorPanel = () => {
     decreasePanelHeight: () => resizeBy(-PANEL_STEP),
     increasePanelHeight: () => resizeBy(PANEL_STEP),
     panelHeight: visiblePanelHeight,
+    previewHeight,
     resizeHandlePanHandlers: panResponder.panHandlers,
   };
 };
