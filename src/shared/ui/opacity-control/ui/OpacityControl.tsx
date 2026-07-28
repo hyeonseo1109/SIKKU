@@ -11,28 +11,34 @@ type OpacityControlProps = {
   value: number;
 };
 
+const clampOpacity = (opacity: number) =>
+  Math.max(0, Math.min(1, Math.round(opacity * 100) / 100));
+
+const opacityToTransparencyPercent = (opacity: number) =>
+  Math.round((1 - clampOpacity(opacity)) * 100);
+
 export const OpacityControl = ({
   label,
   onChange,
   value,
 }: OpacityControlProps) => {
-  const update = (delta: number) =>
-    onChange(Math.max(0, Math.min(1, Math.round((value + delta) * 100) / 100)));
+  const updateTransparency = (delta: number) =>
+    onChange(clampOpacity(value - delta));
 
   return (
     <View style={styles.container}>
       <AppText variant="label">
-        {label} · {Math.round(value * 100)}%
+        {label} · {opacityToTransparencyPercent(value)}%
       </AppText>
       <View style={styles.row}>
         <AppButton
           label="−10%"
-          onPress={() => update(-0.1)}
+          onPress={() => updateTransparency(-0.1)}
           variant="secondary"
         />
         <AppButton
           label="+10%"
-          onPress={() => update(0.1)}
+          onPress={() => updateTransparency(0.1)}
           variant="secondary"
         />
         <AppButton

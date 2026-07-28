@@ -29,43 +29,14 @@ class BitmapComposer(
     val destination = canvasBounds(viewport)
     val cornerRadius = config.cornerRadius * viewport.width / config.width
     val color = WidgetColorParser.parse(config.backgroundColor)
+    if (config.shadow.enabled) {
+      drawCanvasShadow(canvas, destination, cornerRadius, config, viewport)
+    }
     if (color != android.graphics.Color.TRANSPARENT) {
       val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = withOpacity(color, config.backgroundColorOpacity)
-        if (config.shadow.enabled) {
-          val shadowColor = WidgetColorParser.parse(config.shadow.color)
-          val alpha = (config.shadow.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
-          setShadowLayer(
-            config.shadow.blur * viewport.width / config.width,
-            config.shadow.offsetX * viewport.width / config.width,
-            config.shadow.offsetY * viewport.width / config.width,
-            (shadowColor and 0x00FFFFFF) or (alpha shl 24),
-          )
-        }
       }
       canvas.drawRoundRect(destination, cornerRadius, cornerRadius, paint)
-    } else if (config.shadow.enabled) {
-      val scale = viewport.width / config.width
-      val shadowColor = WidgetColorParser.parse(config.shadow.color)
-      val alpha = (config.shadow.opacity.coerceIn(0f, 1f) * 255f).roundToInt()
-      val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        this.color = android.graphics.Color.WHITE
-        setShadowLayer(
-          config.shadow.blur * scale,
-          config.shadow.offsetX * scale,
-          config.shadow.offsetY * scale,
-          (shadowColor and 0x00FFFFFF) or (alpha shl 24),
-        )
-      }
-      canvas.drawRoundRect(destination, cornerRadius, cornerRadius, shadowPaint)
-      canvas.drawRoundRect(
-        destination,
-        cornerRadius,
-        cornerRadius,
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-          xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
-        },
-      )
     }
     val path = config.backgroundImagePath
     if (path != null) {
@@ -98,6 +69,71 @@ class BitmapComposer(
         canvas.restoreToCount(checkpoint)
       }
     }
+  }
+
+  private fun drawCanvasShadow(
+    canvas: Canvas,
+    destination: RectF,
+    cornerRadius: Float,
+    config: NativeCanvasConfig,
+    viewport: WidgetViewport,
+  ) {
+    val scale = viewport.width / config.width
+    val shadowColor = WidgetColorParser.parse(config.shadow.color)
+    val opacity = config.shadow.opacity.coerceIn(0f, 1f)
+
+    drawShadowLayer(
+      canvas = canvas,
+      destination = destination,
+      cornerRadius = cornerRadius,
+      blur = config.shadow.blur * scale,
+      offsetX = 0f,
+      offsetY = 0f,
+      color = shadowColor,
+      opacity = opacity * 0.85f,
+    )
+    drawShadowLayer(
+      canvas = canvas,
+      destination = destination,
+      cornerRadius = cornerRadius,
+      blur = config.shadow.blur * scale * 0.7f,
+      offsetX = config.shadow.offsetX * scale,
+      offsetY = config.shadow.offsetY * scale,
+      color = shadowColor,
+      opacity = opacity * 0.7f,
+    )
+
+    canvas.drawRoundRect(
+      destination,
+      cornerRadius,
+      cornerRadius,
+      Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+      },
+    )
+  }
+
+  private fun drawShadowLayer(
+    canvas: Canvas,
+    destination: RectF,
+    cornerRadius: Float,
+    blur: Float,
+    offsetX: Float,
+    offsetY: Float,
+    color: Int,
+    opacity: Float,
+  ) {
+    val alpha = (opacity.coerceIn(0f, 1f) * 255f).roundToInt()
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      this.color = android.graphics.Color.WHITE
+      setShadowLayer(
+        blur,
+        offsetX,
+        offsetY,
+        (color and 0x00FFFFFF) or (alpha shl 24),
+      )
+    }
+    canvas.drawRoundRect(destination, cornerRadius, cornerRadius, paint)
   }
 
   fun clipToCanvas(

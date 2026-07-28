@@ -221,7 +221,16 @@ export const ClockCanvas = ({
                         blurRadius: shadowBlur,
                         color: withOpacity(
                           canvasShadow.color,
-                          canvasShadow.opacity,
+                          canvasShadow.opacity * 0.85,
+                        ),
+                        offsetX: 0,
+                        offsetY: 0,
+                      },
+                      {
+                        blurRadius: shadowBlur * 0.7,
+                        color: withOpacity(
+                          canvasShadow.color,
+                          canvasShadow.opacity * 0.7,
                         ),
                         offsetX: shadowOffsetX,
                         offsetY: shadowOffsetY,
