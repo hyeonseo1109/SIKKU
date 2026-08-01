@@ -37,6 +37,7 @@ export const clockWidgetNative: ClockWidgetNativeModule = {
   clearProjectWidgets: (projectId) =>
     requireModule().clearProjectWidgets(projectId),
   getInstalledWidgets: () => requireModule().getInstalledWidgets(),
+  refreshWidgets: () => requireModule().refreshWidgets(),
   removeWidgetConfig: (appWidgetId) =>
     requireModule().removeWidgetConfig(appWidgetId),
 };

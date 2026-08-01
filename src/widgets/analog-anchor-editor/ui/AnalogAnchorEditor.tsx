@@ -6,7 +6,7 @@ import { View } from "react-native";
 import type { ClockLayer } from "@/entities/clock-layer";
 import { spacing } from "@/shared/config/theme";
 import { clamp } from "@/shared/lib/geometry";
-import { AppButton, AppText } from "@/shared/ui";
+import { AppButton, AppText, HelpTip } from "@/shared/ui";
 
 import { styles } from "./AnalogAnchorEditor.styles";
 
@@ -89,11 +89,13 @@ export const AnalogAnchorEditor = ({
 
   return (
     <View style={styles.container}>
-      <AppText variant="label">바늘 방향점 설정</AppText>
-      <AppText tone="secondary">
-        청록점은 시간을 가리킬 꼭짓점, 분홍점은 시계 중앙에 붙을 꼭짓점이에요.
-        가까운 점을 잡아 드래그하세요.
-      </AppText>
+      <View style={styles.titleRow}>
+        <AppText variant="label">바늘 방향점 설정</AppText>
+        <HelpTip
+          message="청록점은 시간을 가리킬 꼭짓점, 분홍점은 시계 중앙에 붙을 꼭짓점이에요. 가까운 점을 잡아 드래그하세요."
+          title="바늘 방향점 설정"
+        />
+      </View>
       <View
         onLayout={(event: LayoutChangeEvent) =>
           setFrameWidth(event.nativeEvent.layout.width)

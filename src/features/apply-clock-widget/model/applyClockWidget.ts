@@ -31,6 +31,9 @@ export const updateClockWidgets = (project: ClockProject): Promise<number[]> =>
 export const getClockWidgets = (): Promise<InstalledClockWidget[]> =>
   clockWidgetNative.getInstalledWidgets();
 
+export const refreshClockWidgets = (): Promise<void> =>
+  clockWidgetNative.refreshWidgets();
+
 export const configureUnassignedClockWidgets = async (
   project: ClockProject,
 ): Promise<number[]> => {

@@ -15,6 +15,19 @@ export const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
   },
+  selectedTitle: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 44,
+  },
+  selectedTitleLabel: { flex: 1 },
+  selectedTitlePressed: { opacity: 0.62 },
+  titleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",

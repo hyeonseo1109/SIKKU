@@ -41,6 +41,11 @@ export const styles = StyleSheet.create({
     backgroundColor: "#55C4BF",
     borderColor: "#157E7A",
   },
+  titleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   row: {
     flexDirection: "row",
     gap: spacing.sm,

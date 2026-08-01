@@ -1,16 +1,64 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, spacing } from "@/shared/config/theme";
+import { colors, radius, shadows, spacing } from "@/shared/config/theme";
 
 export const styles = StyleSheet.create({
+  backdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(17, 35, 32, 0.38)",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    gap: spacing.md,
+    maxWidth: 460,
+    padding: spacing.lg,
+    width: "100%",
+    ...shadows.card,
+  },
+  closeButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.full,
+    height: 30,
+    justifyContent: "center",
+    width: 30,
+  },
+  closeLabel: { fontSize: 23, lineHeight: 25 },
+  colorRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 54,
+    paddingHorizontal: spacing.sm,
+  },
+  colorValue: { flex: 1 },
   container: {
     gap: spacing.sm,
   },
+  doneButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    minHeight: 48,
+    justifyContent: "center",
+  },
+  doneLabel: { color: colors.white },
   inputRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.sm,
   },
+  modalHeader: { alignItems: "center", flexDirection: "row", gap: spacing.md },
+  modalTitle: { flex: 1 },
+  pressed: { opacity: 0.68 },
   preview: {
     borderColor: colors.border,
     borderRadius: radius.full,

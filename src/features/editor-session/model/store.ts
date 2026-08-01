@@ -1,7 +1,6 @@
 import { create } from "zustand";
 
-export type EditorTab =
-  "background" | "image" | "clock" | "layers" | "settings";
+export type EditorTab = "element" | "add" | "clock" | "background";
 
 type EditorUiState = {
   selectedLayerId: string | null;
@@ -15,7 +14,7 @@ type EditorUiState = {
 
 export const useEditorUiStore = create<EditorUiState>((set) => ({
   selectedLayerId: null,
-  activeTab: "image",
+  activeTab: "add",
   anchorEditing: false,
   selectLayer: (selectedLayerId) => set({ selectedLayerId }),
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -23,7 +22,7 @@ export const useEditorUiStore = create<EditorUiState>((set) => ({
   reset: () =>
     set({
       selectedLayerId: null,
-      activeTab: "image",
+      activeTab: "add",
       anchorEditing: false,
     }),
 }));

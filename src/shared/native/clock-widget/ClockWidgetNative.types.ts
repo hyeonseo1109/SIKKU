@@ -28,5 +28,6 @@ export type ClockWidgetNativeModule = {
   ) => Promise<number[]>;
   clearProjectWidgets: (projectId: string) => Promise<number[]>;
   getInstalledWidgets: () => Promise<InstalledClockWidget[]>;
+  refreshWidgets: () => Promise<void>;
   removeWidgetConfig: (appWidgetId: number) => Promise<void>;
 };

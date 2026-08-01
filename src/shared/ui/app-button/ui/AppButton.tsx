@@ -1,3 +1,4 @@
+import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import { Pressable, View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
@@ -5,22 +6,29 @@ import { AppText } from "@/shared/ui/app-text";
 import { styles } from "./AppButton.styles";
 
 export type AppButtonProps = {
+  accessibilityLabel?: string;
   label: string;
+  labelStyle?: StyleProp<TextStyle>;
   onPress: () => void;
   variant?: "primary" | "secondary";
   selected?: boolean;
+  style?: StyleProp<ViewStyle>;
   disabled?: boolean;
 };
 
 export const AppButton = ({
+  accessibilityLabel,
   disabled = false,
   label,
+  labelStyle,
   onPress,
   selected = false,
+  style,
   variant = "primary",
 }: AppButtonProps) => {
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled, selected }}
       disabled={disabled}
@@ -31,16 +39,18 @@ export const AppButton = ({
         selected && styles.selected,
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
+        style,
       ]}
     >
       <View>
         <AppText
           variant="label"
-          style={
+          style={[
             variant === "primary" || selected
               ? styles.primaryLabel
-              : styles.secondaryLabel
-          }
+              : styles.secondaryLabel,
+            labelStyle,
+          ]}
         >
           {label}
         </AppText>

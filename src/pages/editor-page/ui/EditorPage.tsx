@@ -5,7 +5,7 @@ import {
   useLocalSearchParams,
   useRouter,
 } from "expo-router";
-import { ScrollView, View } from "react-native";
+import { BackHandler, ScrollView, Switch, View } from "react-native";
 
 import type { ClockLayer, ClockLayerTransform } from "@/entities/clock-layer";
 import { moveLayer, normalizeLayerOrder } from "@/entities/clock-layer";
@@ -46,7 +46,9 @@ import {
   AppScreen,
   AppText,
   ColorField,
+  HelpTip,
   OpacityControl,
+  PropertySliderRow,
   useAppDialog,
 } from "@/shared/ui";
 import { AnalogAnchorEditor } from "@/widgets/analog-anchor-editor";
@@ -66,12 +68,14 @@ import { useResizableEditorPanel } from "../lib/use-resizable-editor-panel";
 import { styles } from "./EditorPage.styles";
 
 const TABS: { key: EditorTab; label: string }[] = [
-  { key: "background", label: "배경" },
-  { key: "image", label: "이미지" },
+  { key: "element", label: "요소" },
+  { key: "add", label: "추가" },
   { key: "clock", label: "시계" },
-  { key: "layers", label: "레이어" },
-  { key: "settings", label: "설정" },
+  { key: "background", label: "배경" },
 ];
+// Kept temporarily while the old editor markup is removed in a later cleanup.
+// A boolean annotation prevents TypeScript from discarding its narrowing rules.
+const LEGACY_PANELS_ENABLED: boolean = false;
 const DIGITS: DigitValue[] = [
   "0",
   "1",
@@ -137,6 +141,7 @@ export const EditorPage = () => {
   );
   const [anchorDragging, setAnchorDragging] = useState(false);
   const [capturingPreview, setCapturingPreview] = useState(false);
+  const [widgetSettingsVisible, setWidgetSettingsVisible] = useState(false);
   const {
     decreasePanelHeight,
     increasePanelHeight,
@@ -147,11 +152,22 @@ export const EditorPage = () => {
   const panelScrollRef = useRef<ScrollView>(null);
   const canvasSnapshotRef = useRef<View>(null);
   const saveInFlightRef = useRef<Promise<boolean> | null>(null);
+  const pendingElementSelectionRef = useRef<{
+    previousLayerIds: string[];
+    target: ImageTarget;
+  } | null>(null);
 
   const handleAnchorDragStateChange = useCallback((dragging: boolean) => {
     setAnchorDragging(dragging);
     panelScrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
   }, []);
+  const handleSelectElement = useCallback(
+    (layerId: string | null) => {
+      selectLayer(layerId);
+      if (layerId) setActiveTab("element");
+    },
+    [selectLayer, setActiveTab],
+  );
 
   const saveEditorProject = useCallback((): Promise<boolean> => {
     if (saveInFlightRef.current) return saveInFlightRef.current;
@@ -202,6 +218,23 @@ export const EditorPage = () => {
     saveInFlightRef.current = saveTask;
     return saveTask;
   }, [replaceProjectWithoutHistory, save]);
+
+  const leaveEditor = useCallback(() => {
+    void saveEditorProject().finally(() => router.replace("/"));
+  }, [router, saveEditorProject]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          leaveEditor();
+          return true;
+        },
+      );
+      return () => subscription.remove();
+    }, [leaveEditor]),
+  );
 
   useEffect(() => {
     if (!isFocused) return;
@@ -287,6 +320,10 @@ export const EditorPage = () => {
             {
               label: "영역 선택",
               onPress: () => {
+                pendingElementSelectionRef.current = {
+                  previousLayerIds: project.layers.map((layer) => layer.id),
+                  target,
+                };
                 setPending({
                   projectId: project.id,
                   asset: result.asset,
@@ -299,9 +336,18 @@ export const EditorPage = () => {
               label: "전체 사용",
               tone: "primary",
               onPress: () => {
-                changeProject((current) =>
-                  applyImageAsset(current, result.asset, target),
+                const nextProject = applyImageAsset(
+                  project,
+                  result.asset,
+                  target,
                 );
+                changeProject(() => nextProject);
+                const addedLayer = nextProject.layers.find(
+                  (layer) =>
+                    !project.layers.some((item) => item.id === layer.id),
+                );
+                if (addedLayer) selectLayer(addedLayer.id);
+                if (target.kind !== "background") setActiveTab("element");
               },
             },
           ],
@@ -314,8 +360,34 @@ export const EditorPage = () => {
         });
       }
     },
-    [changeProject, project, router, setPending, showDialog],
+    [
+      changeProject,
+      project,
+      router,
+      selectLayer,
+      setActiveTab,
+      setPending,
+      showDialog,
+    ],
   );
+
+  useEffect(() => {
+    const pendingSelection = pendingElementSelectionRef.current;
+    if (!isFocused || !project || !pendingSelection) return;
+    const addedLayer = project.layers.find(
+      (layer) => !pendingSelection.previousLayerIds.includes(layer.id),
+    );
+    const replacementId =
+      "replaceLayerId" in pendingSelection.target
+        ? pendingSelection.target.replaceLayerId
+        : undefined;
+    if (addedLayer || replacementId) {
+      handleSelectElement(addedLayer?.id ?? replacementId ?? null);
+    } else if (pendingSelection.target.kind !== "background") {
+      setActiveTab("element");
+    }
+    pendingElementSelectionRef.current = null;
+  }, [handleSelectElement, isFocused, project, setActiveTab]);
 
   const reeditLayer = (layer: ClockLayer) => {
     if (!project) return;
@@ -498,7 +570,7 @@ export const EditorPage = () => {
       return;
     }
     selectLayer(layerId);
-    setActiveTab("clock");
+    setActiveTab("element");
   };
 
   if (loading) {
@@ -556,18 +628,49 @@ export const EditorPage = () => {
         shadow: getNext(resolveCanvasShadow(current.canvas)),
       },
     }));
+  const selectedHandLayer =
+    selectedLayer?.type === "hour-hand" || selectedLayer?.type === "minute-hand"
+      ? selectedLayer
+      : null;
+  const resizeSelectedHand = (
+    factor: number,
+    axis: "both" | "length" | "thickness",
+  ) => {
+    if (!selectedHandLayer) return;
+    const { width, height } = selectedHandLayer.transform;
+    const endpointDeltaX = Math.abs(
+      (selectedHandLayer.transform.tipX ?? 0.5) -
+        selectedHandLayer.transform.anchorX,
+    );
+    const endpointDeltaY = Math.abs(
+      (selectedHandLayer.transform.tipY ?? 0) -
+        selectedHandLayer.transform.anchorY,
+    );
+    const lengthUsesWidth = endpointDeltaX > endpointDeltaY;
+    const resizeWidth =
+      axis === "both" ||
+      (axis === "length" && lengthUsesWidth) ||
+      (axis === "thickness" && !lengthUsesWidth);
+    const resizeHeight =
+      axis === "both" ||
+      (axis === "length" && !lengthUsesWidth) ||
+      (axis === "thickness" && lengthUsesWidth);
+    updateLayerTransform(selectedHandLayer.id, {
+      ...selectedHandLayer.transform,
+      width: resizeWidth
+        ? Math.max(12, Math.min(project.canvas.width * 2, width * factor))
+        : width,
+      height: resizeHeight
+        ? Math.max(12, Math.min(project.canvas.height * 2, height * factor))
+        : height,
+    });
+  };
 
   return (
     <AppScreen>
       <View style={styles.header}>
         <View style={styles.headerButton}>
-          <AppButton
-            label="뒤로"
-            onPress={() => {
-              void saveEditorProject().finally(() => router.back());
-            }}
-            variant="secondary"
-          />
+          <AppButton label="뒤로" onPress={leaveEditor} variant="secondary" />
         </View>
         <View style={styles.headerTitle}>
           <AppText numberOfLines={1} variant="title">
@@ -593,17 +696,55 @@ export const EditorPage = () => {
           project={project}
           saveProject={saveEditorProject}
         />
+        <AppButton
+          label={widgetSettingsVisible ? "위젯 관리 닫기" : "위젯 관리"}
+          onPress={() => setWidgetSettingsVisible((visible) => !visible)}
+          variant="secondary"
+        />
       </View>
 
-      <ClockCanvas
-        maxHeight={previewHeight}
-        onSelectLayer={selectLayer}
-        onTransformDigital={updateDigital}
-        onTransformLayer={updateLayerTransform}
-        project={project}
-        selectedLayerId={capturingPreview ? null : selectedLayerId}
-        snapshotRef={canvasSnapshotRef}
-      />
+      <View style={styles.previewStack}>
+        <ClockCanvas
+          maxHeight={previewHeight}
+          onSelectLayer={handleSelectElement}
+          onTransformDigital={updateDigital}
+          onTransformLayer={updateLayerTransform}
+          project={project}
+          selectedLayerId={capturingPreview ? null : selectedLayerId}
+          snapshotRef={canvasSnapshotRef}
+        />
+        <View style={styles.historyBar}>
+          <AppButton
+            accessibilityLabel="실행 취소"
+            disabled={past.length === 0}
+            label="↶"
+            labelStyle={styles.historyArrow}
+            onPress={undo}
+            style={styles.historyButton}
+            variant="secondary"
+          />
+          <AppButton
+            accessibilityLabel="다시 실행"
+            disabled={future.length === 0}
+            label="↷"
+            labelStyle={styles.historyArrow}
+            onPress={redo}
+            style={styles.historyButton}
+            variant="secondary"
+          />
+        </View>
+        {widgetSettingsVisible ? (
+          <ScrollView
+            contentContainerStyle={styles.widgetSettingsContent}
+            style={styles.widgetSettingsOverlay}
+          >
+            <ClockWidgetSettings
+              project={project}
+              saveProject={saveEditorProject}
+            />
+          </ScrollView>
+        ) : null}
+      </View>
 
       <View style={[styles.toolbar, { height: panelHeight }]}>
         <View
@@ -736,63 +877,43 @@ export const EditorPage = () => {
                 />
               </View>
               {project.canvas.appearance === "glass" ? (
-                <AppText tone="secondary">
-                  배경을 부드럽게 흐리게 처리하고 반투명 색상을 입혀요.
-                </AppText>
+                <View style={styles.sectionTitleRow}>
+                  <AppText variant="label">Glassy 효과</AppText>
+                  <HelpTip
+                    message="배경을 부드럽게 흐리게 처리하고 반투명 색상을 입혀요."
+                    title="Glassy 배경"
+                  />
+                </View>
               ) : null}
               <AppText variant="label">배경 박스 모양</AppText>
-              <View style={styles.wrapRow}>
-                <AppButton
-                  label={`모서리 − (${Math.round(canvasCornerRadius)})`}
-                  onPress={() =>
-                    changeProject((current) => ({
-                      ...current,
-                      canvas: {
-                        ...current.canvas,
-                        cornerRadius: Math.max(
-                          0,
-                          resolveCanvasCornerRadius(current.canvas) - 4,
-                        ),
-                      },
-                    }))
+              <PropertySliderRow
+                label="모서리 둥글기"
+                maximum={
+                  Math.min(project.canvas.width, project.canvas.height) / 2
+                }
+                maximumLabel="둥글게"
+                minimum={0}
+                minimumLabel="각지게"
+                onChange={(cornerRadius) =>
+                  changeProject((current) => ({
+                    ...current,
+                    canvas: { ...current.canvas, cornerRadius },
+                  }))
+                }
+                step={1}
+                value={canvasCornerRadius}
+                valueLabel={(value) => `${Math.round(value)}`}
+              />
+              <View style={styles.toggleRow}>
+                <AppText variant="label" style={styles.toggleLabel}>
+                  그림자 표시
+                </AppText>
+                <Switch
+                  onValueChange={(enabled) =>
+                    updateCanvasShadow((shadow) => ({ ...shadow, enabled }))
                   }
-                  variant="secondary"
-                />
-                <AppButton
-                  label="모서리 +"
-                  onPress={() =>
-                    changeProject((current) => ({
-                      ...current,
-                      canvas: {
-                        ...current.canvas,
-                        cornerRadius: Math.min(
-                          Math.min(
-                            current.canvas.width,
-                            current.canvas.height,
-                          ) / 2,
-                          resolveCanvasCornerRadius(current.canvas) + 4,
-                        ),
-                      },
-                    }))
-                  }
-                  variant="secondary"
-                />
-                <AppButton
-                  label={canvasShadow.enabled ? "그림자 끄기" : "그림자 켜기"}
-                  onPress={() =>
-                    changeProject((current) => {
-                      const shadow = resolveCanvasShadow(current.canvas);
-                      return {
-                        ...current,
-                        canvas: {
-                          ...current.canvas,
-                          shadow: { ...shadow, enabled: !shadow.enabled },
-                        },
-                      };
-                    })
-                  }
-                  selected={canvasShadow.enabled}
-                  variant="secondary"
+                  trackColor={{ false: "#DDE8E6", true: "#72C6BA" }}
+                  value={canvasShadow.enabled}
                 />
               </View>
               {canvasShadow.enabled ? (
@@ -804,93 +925,47 @@ export const EditorPage = () => {
                     }
                     value={canvasShadow.color}
                   />
-                  <View style={styles.wrapRow}>
-                    <AppButton
-                      label={`농도 − (${Math.round(canvasShadow.opacity * 100)}%)`}
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          opacity: Math.max(0.04, shadow.opacity - 0.04),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                    <AppButton
-                      label="농도 +"
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          opacity: Math.min(0.5, shadow.opacity + 0.04),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                    <AppButton
-                      label={`퍼짐 − (${Math.round(canvasShadow.blur)})`}
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          blur: Math.max(0, shadow.blur - 3),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                    <AppButton
-                      label="퍼짐 +"
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          blur: Math.min(48, shadow.blur + 3),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                  </View>
-                  <AppText tone="secondary" variant="label">
-                    그림자 위치
-                  </AppText>
-                  <View style={styles.wrapRow}>
-                    <AppButton
-                      label={`X − (${Math.round(canvasShadow.offsetX)})`}
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          offsetX: Math.max(-40, shadow.offsetX - 2),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                    <AppButton
-                      label="X +"
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          offsetX: Math.min(40, shadow.offsetX + 2),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                    <AppButton
-                      label={`Y − (${Math.round(canvasShadow.offsetY)})`}
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          offsetY: Math.max(-40, shadow.offsetY - 2),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                    <AppButton
-                      label="Y +"
-                      onPress={() =>
-                        updateCanvasShadow((shadow) => ({
-                          ...shadow,
-                          offsetY: Math.min(40, shadow.offsetY + 2),
-                        }))
-                      }
-                      variant="secondary"
-                    />
-                  </View>
+                  <PropertySliderRow
+                    label="그림자 농도"
+                    maximum={0.5}
+                    minimum={0.04}
+                    onChange={(opacity) =>
+                      updateCanvasShadow((shadow) => ({ ...shadow, opacity }))
+                    }
+                    step={0.01}
+                    value={canvasShadow.opacity}
+                    valueLabel={(value) => `${Math.round(value * 100)}%`}
+                  />
+                  <PropertySliderRow
+                    label="그림자 번짐"
+                    maximum={48}
+                    minimum={0}
+                    onChange={(blur) =>
+                      updateCanvasShadow((shadow) => ({ ...shadow, blur }))
+                    }
+                    step={1}
+                    value={canvasShadow.blur}
+                  />
+                  <PropertySliderRow
+                    label="그림자 X 위치"
+                    maximum={40}
+                    minimum={-40}
+                    onChange={(offsetX) =>
+                      updateCanvasShadow((shadow) => ({ ...shadow, offsetX }))
+                    }
+                    step={1}
+                    value={canvasShadow.offsetX}
+                  />
+                  <PropertySliderRow
+                    label="그림자 Y 위치"
+                    maximum={40}
+                    minimum={-40}
+                    onChange={(offsetY) =>
+                      updateCanvasShadow((shadow) => ({ ...shadow, offsetY }))
+                    }
+                    step={1}
+                    value={canvasShadow.offsetY}
+                  />
                 </View>
               ) : null}
               <AppButton
@@ -939,21 +1014,77 @@ export const EditorPage = () => {
             </>
           ) : null}
 
-          {activeTab === "image" ? (
+          {activeTab === "add" ? (
             <>
-              <AppText variant="label">꾸미기 이미지</AppText>
-              <AppText tone="secondary">
-                사진을 전체로 쓰거나 자유롭게 둘러 그린 영역만 PNG로 추가할 수
-                있어요.
-              </AppText>
+              <View style={styles.sectionTitleRow}>
+                <AppText variant="label">새 요소 추가</AppText>
+                <HelpTip
+                  message="사진 전체를 사용하거나 자유롭게 둘러 그린 영역만 PNG 요소로 추가할 수 있어요. 추가를 마치면 요소 탭에서 위치, 색상, 투명도와 레이어 순서를 편집하세요."
+                  title="이미지 요소 추가"
+                />
+              </View>
               <AppButton
                 label="장식 이미지 추가"
                 onPress={() => void chooseImage({ kind: "decoration" })}
               />
+              {project.type === "analog" ? (
+                <View style={styles.buttonRow}>
+                  <View style={styles.rowItem}>
+                    <AppButton
+                      label="시침 이미지 추가·교체"
+                      onPress={() =>
+                        chooseHand(
+                          "hour-hand",
+                          project.analogConfig?.hourHandLayerId,
+                        )
+                      }
+                      variant="secondary"
+                    />
+                  </View>
+                  <View style={styles.rowItem}>
+                    <AppButton
+                      label="분침 이미지 추가·교체"
+                      onPress={() =>
+                        chooseHand(
+                          "minute-hand",
+                          project.analogConfig?.minuteHandLayerId,
+                        )
+                      }
+                      variant="secondary"
+                    />
+                  </View>
+                </View>
+              ) : null}
+              {project.type === "digital" && project.digitalConfig ? (
+                <>
+                  <View style={styles.sectionTitleRow}>
+                    <AppText variant="label">숫자·구분자 이미지</AppText>
+                    <HelpTip
+                      message="숫자별 이미지를 추가하거나 교체할 수 있어요. 추가한 뒤 요소 탭에서 각 시간 자리의 위치와 크기를 조절하세요."
+                      title="디지털 이미지"
+                    />
+                  </View>
+                  <View style={styles.wrapRow}>
+                    {DIGITS.map((digit) => (
+                      <AppButton
+                        key={digit}
+                        label={digit === "colon" ? "구분자 이미지" : digit}
+                        onPress={() => manageDigit(digit)}
+                        selected={Boolean(
+                          project.digitalConfig?.digitImageMap[digit],
+                        )}
+                        variant="secondary"
+                      />
+                    ))}
+                  </View>
+                </>
+              ) : null}
             </>
           ) : null}
 
-          {activeTab === "clock" && project.type === "analog" ? (
+          {LEGACY_PANELS_ENABLED &&
+          activeTab === "clock" &&
+          project.type === "analog" ? (
             <>
               <AppText variant="label">아날로그 시계</AppText>
               <View style={styles.buttonRow}>
@@ -1229,15 +1360,19 @@ export const EditorPage = () => {
                   }
                 />
               ) : (
-                <AppText tone="secondary">
-                  캔버스나 레이어 탭에서 시침·분침을 선택하면 회전 기준점을
-                  조절할 수 있어요.
-                </AppText>
+                <View style={styles.sectionTitleRow}>
+                  <AppText tone="secondary">선택된 바늘 없음</AppText>
+                  <HelpTip
+                    message="캔버스나 요소 탭에서 시침·분침을 선택하면 회전 기준점을 조절할 수 있어요."
+                    title="바늘 편집"
+                  />
+                </View>
               )}
             </>
           ) : null}
 
-          {activeTab === "clock" &&
+          {LEGACY_PANELS_ENABLED &&
+          activeTab === "clock" &&
           project.type === "digital" &&
           project.digitalConfig ? (
             <>
@@ -1371,21 +1506,29 @@ export const EditorPage = () => {
                 ))}
               </View>
               {digitalSeparatorStyle === "image" ? (
-                <AppText tone="secondary">
-                  구분자 이미지를 사용 중이에요. 위의 문자 구분자를 선택하면
-                  이미지 모드가 해제됩니다.
-                </AppText>
+                <View style={styles.sectionTitleRow}>
+                  <AppText tone="secondary">구분자 이미지 사용 중</AppText>
+                  <HelpTip
+                    message="위의 문자 구분자를 선택하면 이미지 모드가 해제됩니다."
+                    title="시간 구분자 이미지"
+                  />
+                </View>
               ) : null}
-              <AppText variant="label">숫자 자리별 위치</AppText>
-              <AppText tone="secondary">
-                각 자리를 선택한 뒤 캔버스에서 따로 끌어서 배치할 수 있어요.
-              </AppText>
+              <View style={styles.sectionTitleRow}>
+                <AppText variant="label">숫자 자리별 위치</AppText>
+                <HelpTip
+                  message="각 자리를 선택한 뒤 캔버스에서 따로 끌어서 배치할 수 있어요."
+                  title="숫자 자리 배치"
+                />
+              </View>
               <View style={styles.wrapRow}>
                 {DIGITAL_SLOT_IDS.map((slotId) => (
                   <AppButton
                     key={slotId}
                     label={DIGITAL_SLOT_LABELS[slotId]}
-                    onPress={() => selectLayer(getDigitalSelectionId(slotId))}
+                    onPress={() =>
+                      handleSelectElement(getDigitalSelectionId(slotId))
+                    }
                     selected={selectedDigitalSlotId === slotId}
                     variant="secondary"
                   />
@@ -1436,7 +1579,203 @@ export const EditorPage = () => {
             </>
           ) : null}
 
-          {activeTab === "layers" ? (
+          {activeTab === "clock" && project.type === "analog" ? (
+            <>
+              <View style={styles.sectionTitleRow}>
+                <AppText variant="label">아날로그 시계 전체 설정</AppText>
+                <HelpTip
+                  message="시침·분침의 이미지, 색상, 크기와 방향점은 요소 탭에서 해당 바늘을 선택해 편집하세요."
+                  title="아날로그 시계 설정"
+                />
+              </View>
+              <View style={styles.wrapRow}>
+                <AppButton
+                  label="현재 시간"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      analogConfig: current.analogConfig
+                        ? { ...current.analogConfig, previewMode: "current" }
+                        : undefined,
+                    }))
+                  }
+                  selected={project.analogConfig?.previewMode === "current"}
+                  variant="secondary"
+                />
+                {[
+                  [10, 10],
+                  [3, 30],
+                  [6, 0],
+                ].map(([hour, minute]) => (
+                  <AppButton
+                    key={`${hour}:${minute}`}
+                    label={`${String(hour).padStart(2, "0")}:${String(
+                      minute,
+                    ).padStart(2, "0")}`}
+                    onPress={() =>
+                      changeProject((current) => ({
+                        ...current,
+                        analogConfig: current.analogConfig
+                          ? {
+                              ...current.analogConfig,
+                              previewHour: hour ?? 0,
+                              previewMinute: minute ?? 0,
+                              previewMode: "custom",
+                            }
+                          : undefined,
+                      }))
+                    }
+                    selected={
+                      project.analogConfig?.previewMode === "custom" &&
+                      project.analogConfig.previewHour === hour &&
+                      project.analogConfig.previewMinute === minute
+                    }
+                    variant="secondary"
+                  />
+                ))}
+                <AppButton
+                  label={
+                    project.analogConfig?.showCenterCap
+                      ? "중심점 표시 중"
+                      : "중심점 숨김"
+                  }
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      analogConfig: current.analogConfig
+                        ? {
+                            ...current.analogConfig,
+                            showCenterCap: !current.analogConfig.showCenterCap,
+                          }
+                        : undefined,
+                    }))
+                  }
+                  selected={project.analogConfig?.showCenterCap}
+                  variant="secondary"
+                />
+              </View>
+              <ColorField
+                label="중심점 색상"
+                onChange={(centerCapColor) =>
+                  changeProject((current) => ({
+                    ...current,
+                    analogConfig: current.analogConfig
+                      ? { ...current.analogConfig, centerCapColor }
+                      : undefined,
+                  }))
+                }
+                value={project.analogConfig?.centerCapColor ?? "#F3A58E"}
+              />
+            </>
+          ) : null}
+
+          {activeTab === "clock" &&
+          project.type === "digital" &&
+          project.digitalConfig ? (
+            <>
+              <View style={styles.sectionTitleRow}>
+                <AppText variant="label">디지털 시계 전체 설정</AppText>
+                <HelpTip
+                  message="각 시간 자리의 위치와 크기는 요소 탭에서 편집하고, 숫자 이미지는 추가 탭에서 관리하세요."
+                  title="디지털 시계 설정"
+                />
+              </View>
+              <View style={styles.wrapRow}>
+                <AppButton
+                  label="24시간 HH:mm"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      digitalConfig: current.digitalConfig
+                        ? { ...current.digitalConfig, format: "HH:mm" }
+                        : undefined,
+                    }))
+                  }
+                  selected={project.digitalConfig.format === "HH:mm"}
+                  variant="secondary"
+                />
+                <AppButton
+                  label="12시간 h:mm"
+                  onPress={() =>
+                    changeProject((current) => ({
+                      ...current,
+                      digitalConfig: current.digitalConfig
+                        ? { ...current.digitalConfig, format: "h:mm" }
+                        : undefined,
+                    }))
+                  }
+                  selected={project.digitalConfig.format === "h:mm"}
+                  variant="secondary"
+                />
+              </View>
+              <PropertySliderRow
+                label="숫자 간격"
+                maximum={48}
+                maximumLabel="넓게"
+                minimum={0}
+                minimumLabel="좁게"
+                onChange={(digitSpacing) =>
+                  changeProject((current) => ({
+                    ...current,
+                    digitalConfig: current.digitalConfig
+                      ? { ...current.digitalConfig, digitSpacing }
+                      : undefined,
+                  }))
+                }
+                step={1}
+                value={project.digitalConfig.digitSpacing}
+              />
+              <ColorField
+                label="숫자 및 구분자 색상"
+                onChange={(digitColor) =>
+                  changeProject((current) => ({
+                    ...current,
+                    digitalConfig: current.digitalConfig
+                      ? { ...current.digitalConfig, digitColor }
+                      : undefined,
+                  }))
+                }
+                value={project.digitalConfig.digitColor ?? "#18312E"}
+              />
+              <OpacityControl
+                label="숫자 및 구분자 투명도"
+                onChange={(digitOpacity) =>
+                  changeProject((current) => ({
+                    ...current,
+                    digitalConfig: current.digitalConfig
+                      ? { ...current.digitalConfig, digitOpacity }
+                      : undefined,
+                  }))
+                }
+                value={project.digitalConfig.digitOpacity ?? 1}
+              />
+              <AppText variant="label">시간 구분자</AppText>
+              <View style={styles.wrapRow}>
+                {SEPARATORS.map((separator) => (
+                  <AppButton
+                    key={separator.value}
+                    label={separator.label}
+                    onPress={() =>
+                      changeProject((current) => ({
+                        ...current,
+                        digitalConfig: current.digitalConfig
+                          ? {
+                              ...current.digitalConfig,
+                              colonVisible: separator.value !== "none",
+                              separatorStyle: separator.value,
+                            }
+                          : undefined,
+                      }))
+                    }
+                    selected={digitalSeparatorStyle === separator.value}
+                    variant="secondary"
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          {activeTab === "element" ? (
             <>
               {project.type === "digital" ? (
                 <>
@@ -1447,7 +1786,7 @@ export const EditorPage = () => {
                         key={slotId}
                         label={DIGITAL_SLOT_LABELS[slotId]}
                         onPress={() =>
-                          selectLayer(getDigitalSelectionId(slotId))
+                          handleSelectElement(getDigitalSelectionId(slotId))
                         }
                         selected={selectedDigitalSlotId === slotId}
                         variant="secondary"
@@ -1475,7 +1814,7 @@ export const EditorPage = () => {
                 }
                 onReedit={reeditLayer}
                 onRemove={removeLayer}
-                onSelect={selectLayer}
+                onSelect={handleSelectElement}
                 onToggleLock={(layerId) =>
                   changeProject((current) => ({
                     ...current,
@@ -1506,34 +1845,36 @@ export const EditorPage = () => {
                 }
                 selectedLayerId={selectedLayerId}
               />
-            </>
-          ) : null}
-
-          {activeTab === "settings" ? (
-            <>
-              <AppText variant="label">편집 기록</AppText>
-              <View style={styles.buttonRow}>
-                <View style={styles.rowItem}>
-                  <AppButton
-                    disabled={past.length === 0}
-                    label="실행 취소"
-                    onPress={undo}
-                    variant="secondary"
-                  />
-                </View>
-                <View style={styles.rowItem}>
-                  <AppButton
-                    disabled={future.length === 0}
-                    label="다시 실행"
-                    onPress={redo}
-                    variant="secondary"
-                  />
-                </View>
-              </View>
-              <ClockWidgetSettings
-                project={project}
-                saveProject={saveEditorProject}
-              />
+              {project.type === "analog" && selectedHandLayer ? (
+                <AnalogAnchorEditor
+                  key={`${selectedHandLayer.id}-${selectedHandLayer.imageUri}`}
+                  layer={selectedHandLayer}
+                  onCommit={({ pivotX, pivotY, tipX, tipY }) =>
+                    updateLayerTransform(selectedHandLayer.id, {
+                      ...selectedHandLayer.transform,
+                      anchorX: pivotX,
+                      anchorY: pivotY,
+                      tipX,
+                      tipY,
+                    })
+                  }
+                  onDragStateChange={handleAnchorDragStateChange}
+                  onResize={resizeSelectedHand}
+                />
+              ) : null}
+              {project.type === "digital" &&
+              selectedDigitalSlotId &&
+              digitalSlotTransforms ? (
+                <DigitalSlotEditor
+                  canvasHeight={project.canvas.height}
+                  canvasWidth={project.canvas.width}
+                  label={DIGITAL_SLOT_LABELS[selectedDigitalSlotId]}
+                  onChange={(transform) =>
+                    updateDigital(selectedDigitalSlotId, transform)
+                  }
+                  transform={digitalSlotTransforms[selectedDigitalSlotId]}
+                />
+              ) : null}
             </>
           ) : null}
         </ScrollView>

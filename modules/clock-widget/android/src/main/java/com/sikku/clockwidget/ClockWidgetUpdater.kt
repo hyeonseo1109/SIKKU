@@ -66,6 +66,15 @@ class ClockWidgetUpdater(
     }
   }
 
+  fun updateAll() {
+    installedWidgetIds(context).forEach { appWidgetId ->
+      runCatching { update(appWidgetId) }
+        .onFailure { error ->
+          Log.e(TAG, "Widget $appWidgetId update failed", error)
+        }
+    }
+  }
+
   fun updateAllAsync(onComplete: (() -> Unit)? = null) {
     val ids = installedWidgetIds(context)
     if (ids.isEmpty()) {
@@ -74,12 +83,7 @@ class ClockWidgetUpdater(
     }
     EXECUTOR.execute {
       try {
-        ids.forEach { appWidgetId ->
-          runCatching { update(appWidgetId) }
-            .onFailure { error ->
-              Log.e(TAG, "Widget $appWidgetId update failed", error)
-            }
-        }
+        updateAll()
       } finally {
         onComplete?.invoke()
       }

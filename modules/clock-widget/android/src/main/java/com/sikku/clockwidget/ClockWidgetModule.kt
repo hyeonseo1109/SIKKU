@@ -135,6 +135,12 @@ class ClockWidgetModule : Module() {
       }
     }
 
+    AsyncFunction("refreshWidgets") {
+      val context = requireContext()
+      ClockWidgetDependencies.updater(context).updateAll()
+      ClockWidgetDependencies.scheduler(context).scheduleNextMinute()
+    }
+
     AsyncFunction("removeWidgetConfig") { appWidgetId: Int ->
       val context = requireContext()
       ClockWidgetDependencies.repository(context).remove(appWidgetId)

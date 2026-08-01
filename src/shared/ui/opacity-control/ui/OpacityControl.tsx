@@ -1,9 +1,4 @@
-import { View } from "react-native";
-
-import { AppButton } from "@/shared/ui/app-button";
-import { AppText } from "@/shared/ui/app-text";
-
-import { styles } from "./OpacityControl.styles";
+import { PropertySliderRow } from "@/shared/ui/property-slider-row";
 
 type OpacityControlProps = {
   label: string;
@@ -22,36 +17,17 @@ export const OpacityControl = ({
   onChange,
   value,
 }: OpacityControlProps) => {
-  const updateTransparency = (delta: number) =>
-    onChange(clampOpacity(value - delta));
-
   return (
-    <View style={styles.container}>
-      <AppText variant="label">
-        {label} · {opacityToTransparencyPercent(value)}%
-      </AppText>
-      <View style={styles.row}>
-        <AppButton
-          label="−10%"
-          onPress={() => updateTransparency(-0.1)}
-          variant="secondary"
-        />
-        <AppButton
-          label="+10%"
-          onPress={() => updateTransparency(0.1)}
-          variant="secondary"
-        />
-        <AppButton
-          label="투명"
-          onPress={() => onChange(0)}
-          variant="secondary"
-        />
-        <AppButton
-          label="불투명"
-          onPress={() => onChange(1)}
-          variant="secondary"
-        />
-      </View>
-    </View>
+    <PropertySliderRow
+      label={label}
+      maximum={1}
+      maximumLabel="투명"
+      minimum={0}
+      minimumLabel="불투명"
+      onChange={(transparency) => onChange(clampOpacity(1 - transparency))}
+      step={0.01}
+      value={1 - clampOpacity(value)}
+      valueLabel={() => `${opacityToTransparencyPercent(value)}%`}
+    />
   );
 };

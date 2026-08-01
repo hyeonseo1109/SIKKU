@@ -15,16 +15,9 @@ class WidgetUpdateScheduler(private val context: Context) {
     val nextMinute = ClockMath.nextMinuteAfter(System.currentTimeMillis())
     val alarmManager = context.getSystemService(AlarmManager::class.java)
     if (canScheduleExactUpdates(alarmManager)) {
-      // A non-wakeup exact alarm keeps the visible widget minute-accurate without
-      // waking a sleeping device. An overdue alarm is delivered when it wakes.
-      alarmManager.setExact(AlarmManager.RTC, nextMinute, pendingIntent())
+      scheduleExact(alarmManager, nextMinute)
     } else {
-      alarmManager.setWindow(
-        AlarmManager.RTC,
-        nextMinute,
-        FALLBACK_WINDOW_MILLIS,
-        pendingIntent(),
-      )
+      scheduleBestEffort(alarmManager, nextMinute)
     }
   }
 
@@ -33,6 +26,42 @@ class WidgetUpdateScheduler(private val context: Context) {
 
   fun cancel() {
     context.getSystemService(AlarmManager::class.java).cancel(pendingIntent())
+  }
+
+  private fun scheduleExact(alarmManager: AlarmManager, triggerAtMillis: Long) {
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        alarmManager.setExactAndAllowWhileIdle(
+          AlarmManager.RTC_WAKEUP,
+          triggerAtMillis,
+          pendingIntent(),
+        )
+      } else {
+        alarmManager.setExact(
+          AlarmManager.RTC_WAKEUP,
+          triggerAtMillis,
+          pendingIntent(),
+        )
+      }
+    } catch (_: SecurityException) {
+      scheduleBestEffort(alarmManager, triggerAtMillis)
+    }
+  }
+
+  private fun scheduleBestEffort(alarmManager: AlarmManager, triggerAtMillis: Long) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      alarmManager.setAndAllowWhileIdle(
+        AlarmManager.RTC_WAKEUP,
+        triggerAtMillis,
+        pendingIntent(),
+      )
+    } else {
+      alarmManager.set(
+        AlarmManager.RTC_WAKEUP,
+        triggerAtMillis,
+        pendingIntent(),
+      )
+    }
   }
 
   private fun pendingIntent(): PendingIntent =
@@ -44,7 +73,6 @@ class WidgetUpdateScheduler(private val context: Context) {
     )
 
   companion object {
-    private const val FALLBACK_WINDOW_MILLIS = 60_000L
     private const val REQUEST_CODE = 9417
 
     private fun canScheduleExactUpdates(alarmManager: AlarmManager): Boolean =

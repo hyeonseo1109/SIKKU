@@ -5,3 +5,5 @@ export { AppScreen } from "./app-screen";
 export { AppText } from "./app-text";
 export { ColorField } from "./color-field";
 export { OpacityControl } from "./opacity-control";
+export { HelpTip } from "./help-tip";
+export { PropertySliderRow } from "./property-slider-row";
