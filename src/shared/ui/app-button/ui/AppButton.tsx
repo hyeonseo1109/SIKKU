@@ -10,6 +10,7 @@ export type AppButtonProps = {
   label: string;
   labelStyle?: StyleProp<TextStyle>;
   onPress: () => void;
+  pressedStyle?: StyleProp<ViewStyle>;
   variant?: "primary" | "secondary";
   selected?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -22,6 +23,7 @@ export const AppButton = ({
   label,
   labelStyle,
   onPress,
+  pressedStyle,
   selected = false,
   style,
   variant = "primary",
@@ -40,6 +42,7 @@ export const AppButton = ({
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,
+        pressed && !disabled && pressedStyle,
       ]}
     >
       <View>

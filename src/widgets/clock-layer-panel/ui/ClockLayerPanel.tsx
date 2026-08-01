@@ -15,6 +15,13 @@ import { styles } from "./ClockLayerPanel.styles";
 
 type LayerDirection = "up" | "down" | "front" | "back";
 
+const LAYER_TYPE_LABEL: Record<ClockLayer["type"], string> = {
+  decoration: "장식",
+  digit: "숫자",
+  "hour-hand": "시침",
+  "minute-hand": "분침",
+};
+
 type ClockLayerPanelProps = {
   layers: ClockLayer[];
   selectedLayerId: string | null;
@@ -45,9 +52,14 @@ export const ClockLayerPanel = ({
   const { showDialog } = useAppDialog();
   const [collapsedLayerId, setCollapsedLayerId] = useState<string | null>(null);
   const orderedLayers = [...layers].sort((a, b) => b.zIndex - a.zIndex);
+  const layerOrderById = new Map(
+    [...layers]
+      .sort((a, b) => a.zIndex - b.zIndex)
+      .map((layer, index) => [layer.id, index + 1]),
+  );
   const selectedLayer = layers.find((layer) => layer.id === selectedLayerId);
-  const isFront = selectedLayer?.zIndex === layers.length - 1;
-  const isBack = selectedLayer?.zIndex === 0;
+  const isFront = selectedLayer?.id === orderedLayers[0]?.id;
+  const isBack = selectedLayer?.id === orderedLayers.at(-1)?.id;
   const isHand =
     selectedLayer?.type === "hour-hand" ||
     selectedLayer?.type === "minute-hand";
@@ -81,7 +93,8 @@ export const ClockLayerPanel = ({
             ]}
           >
             <AppText variant="label" style={styles.selectedTitleLabel}>
-              {selectedLayer.name} · 순서 {selectedLayer.zIndex + 1}
+              {selectedLayer.name} - {LAYER_TYPE_LABEL[selectedLayer.type]} (
+              {layerOrderById.get(selectedLayer.id)})
             </AppText>
             <AppText tone="secondary">{detailsExpanded ? "▲" : "▼"}</AppText>
           </Pressable>
@@ -193,7 +206,7 @@ export const ClockLayerPanel = ({
         {orderedLayers.map((layer) => (
           <AppButton
             key={layer.id}
-            label={`${layer.name} · 순서 ${layer.zIndex + 1}${
+            label={`${layer.name} - ${LAYER_TYPE_LABEL[layer.type]} (${layerOrderById.get(layer.id)})${
               layer.locked ? " · 잠김" : ""
             }${layer.visible ? "" : " · 숨김"}`}
             onPress={() => onSelect(layer.id)}

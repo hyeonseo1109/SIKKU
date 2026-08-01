@@ -670,13 +670,23 @@ export const EditorPage = () => {
     <AppScreen>
       <View style={styles.header}>
         <View style={styles.headerButton}>
-          <AppButton label="뒤로" onPress={leaveEditor} variant="secondary" />
+          <AppButton
+            label="뒤로"
+            labelStyle={styles.headerButtonLabel}
+            onPress={leaveEditor}
+            style={styles.compactHeaderButton}
+            variant="secondary"
+          />
         </View>
         <View style={styles.headerTitle}>
-          <AppText numberOfLines={1} variant="title">
+          <AppText
+            numberOfLines={1}
+            style={styles.headerTitleText}
+            variant="title"
+          >
             {project.name}
           </AppText>
-          <AppText tone="secondary">
+          <AppText style={styles.headerStatusText} tone="secondary">
             {saveStatus === "saving"
               ? "저장 중…"
               : saveStatus === "dirty"
@@ -687,7 +697,12 @@ export const EditorPage = () => {
           </AppText>
         </View>
         <View style={styles.headerButton}>
-          <AppButton label="저장" onPress={() => void saveEditorProject()} />
+          <AppButton
+            label="저장"
+            labelStyle={styles.headerButtonLabel}
+            onPress={() => void saveEditorProject()}
+            style={styles.compactHeaderButton}
+          />
         </View>
       </View>
 
@@ -720,8 +735,9 @@ export const EditorPage = () => {
             label="↶"
             labelStyle={styles.historyArrow}
             onPress={undo}
+            pressedStyle={styles.historyButtonPressed}
             style={styles.historyButton}
-            variant="secondary"
+            variant="primary"
           />
           <AppButton
             accessibilityLabel="다시 실행"
@@ -729,8 +745,9 @@ export const EditorPage = () => {
             label="↷"
             labelStyle={styles.historyArrow}
             onPress={redo}
+            pressedStyle={styles.historyButtonPressed}
             style={styles.historyButton}
-            variant="secondary"
+            variant="primary"
           />
         </View>
         {widgetSettingsVisible ? (
