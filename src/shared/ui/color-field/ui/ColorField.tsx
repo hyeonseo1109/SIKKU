@@ -108,6 +108,7 @@ const ColorHexInput = ({
   value,
 }: Pick<ColorFieldProps, "onChange" | "value">) => {
   const [draft, setDraft] = useState(value);
+
   const commit = () => {
     const normalized = normalizeHex(draft);
     if (normalized) onChange(normalized);
@@ -122,8 +123,11 @@ const ColorHexInput = ({
       onBlur={commit}
       onChangeText={(text) => {
         setDraft(text);
-        const normalized = normalizeHex(text);
-        if (normalized) onChange(normalized);
+        const trimmed = text.trim();
+        if (/^#?[\dA-Fa-f]{6}$/.test(trimmed)) {
+          const normalized = normalizeHex(trimmed);
+          if (normalized) onChange(normalized);
+        }
       }}
       onSubmitEditing={commit}
       placeholder="#RRGGBB"
