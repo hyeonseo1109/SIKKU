@@ -57,6 +57,7 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   modalHeader: { alignItems: "center", flexDirection: "row", gap: spacing.md },
+  modalRoot: { flex: 1 },
   modalTitle: { flex: 1 },
   pressed: { opacity: 0.68 },
   preview: {

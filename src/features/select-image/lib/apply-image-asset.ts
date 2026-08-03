@@ -102,6 +102,9 @@ export const applyImageAsset = (
       ...next,
       digitalConfig: {
         ...next.digitalConfig,
+        // A newly assigned image should display its source colors by default.
+        // The user can opt into a tint again from the color control afterward.
+        digitColor: undefined,
         ...(target.digit === "colon"
           ? { colonVisible: true, separatorStyle: "image" as const }
           : {}),
@@ -156,6 +159,7 @@ export const applyImageAsset = (
               ...layer,
               imageUri: asset.processedUri,
               imageAssetId: asset.id,
+              tintColor: undefined,
               transform: {
                 ...layer.transform,
                 width: replacementSize.width,
@@ -225,12 +229,7 @@ export const applyImageAsset = (
         : type === "minute-hand"
           ? (next.analogConfig?.minuteHandOpacity ?? 1)
           : 1,
-    tintColor:
-      type === "hour-hand"
-        ? next.analogConfig?.hourHandColor
-        : type === "minute-hand"
-          ? next.analogConfig?.minuteHandColor
-          : undefined,
+    tintColor: undefined,
   };
 
   next = {

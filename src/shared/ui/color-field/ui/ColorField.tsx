@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import { Modal, Pressable, TextInput, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import {
   Canvas,
   Circle,
@@ -17,7 +21,6 @@ import { styles } from "./ColorField.styles";
 const PICKER_HEIGHT = 148;
 const HUE_WIDTH = 30;
 const MARKER_RADIUS = 9;
-const DRAG_ACTIVATION_DISTANCE = 8;
 const HUE_COLORS = [
   "#FF0000",
   "#FFFF00",
@@ -168,20 +171,23 @@ export const ColorField = ({ label, onChange, value }: ColorFieldProps) => {
       .runOnJS(true)
       .onEnd((event) => updateSaturation(event.x, event.y));
     const deliberateDrag = Gesture.Pan()
-      .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
-      .failOffsetY([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
+      .minDistance(1)
       .runOnJS(true)
       .onStart((event) => updateSaturation(event.x, event.y))
       .onUpdate((event) => updateSaturation(event.x, event.y));
     return Gesture.Exclusive(deliberateDrag, tap);
   }, [updateSaturation]);
-  const hueGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .runOnJS(true)
-        .onEnd((event) => updateHue(event.y)),
-    [updateHue],
-  );
+  const hueGesture = useMemo(() => {
+    const tap = Gesture.Tap()
+      .runOnJS(true)
+      .onEnd((event) => updateHue(event.y));
+    const drag = Gesture.Pan()
+      .minDistance(1)
+      .runOnJS(true)
+      .onStart((event) => updateHue(event.y))
+      .onUpdate((event) => updateHue(event.y));
+    return Gesture.Exclusive(drag, tap);
+  }, [updateHue]);
   const handleLayout = (event: LayoutChangeEvent) =>
     setPickerWidth(event.nativeEvent.layout.width);
 
@@ -205,155 +211,159 @@ export const ColorField = ({ label, onChange, value }: ColorFieldProps) => {
         transparent
         visible={visible}
       >
-        <Pressable onPress={() => setVisible(false)} style={styles.backdrop}>
-          <Pressable
-            accessibilityViewIsModal
-            onPress={(event) => event.stopPropagation()}
-            style={styles.card}
-          >
-            <View style={styles.modalHeader}>
-              <AppText variant="heading" style={styles.modalTitle}>
-                {label}
-              </AppText>
-              <Pressable
-                accessibilityLabel="컬러 피커 닫기"
-                accessibilityRole="button"
-                hitSlop={10}
-                onPress={() => setVisible(false)}
-                style={styles.closeButton}
-              >
-                <AppText style={styles.closeLabel}>×</AppText>
-              </Pressable>
-            </View>
-            <View style={styles.picker}>
-              <GestureDetector gesture={saturationGesture}>
-                <View
-                  accessibilityLabel={`${label} 채도와 밝기 선택`}
-                  onLayout={handleLayout}
-                  style={styles.saturationPicker}
-                >
-                  {pickerWidth > 0 ? (
-                    <Canvas pointerEvents="none" style={styles.canvas}>
-                      <Rect
-                        height={PICKER_HEIGHT}
-                        width={pickerWidth}
-                        x={0}
-                        y={0}
-                      >
-                        <LinearGradient
-                          colors={["#FFFFFF", hueColor]}
-                          end={vec(pickerWidth, 0)}
-                          start={vec(0, 0)}
-                        />
-                      </Rect>
-                      <Rect
-                        height={PICKER_HEIGHT}
-                        width={pickerWidth}
-                        x={0}
-                        y={0}
-                      >
-                        <LinearGradient
-                          colors={["rgba(0,0,0,0)", "#000000"]}
-                          end={vec(0, PICKER_HEIGHT)}
-                          start={vec(0, 0)}
-                        />
-                      </Rect>
-                      <Circle
-                        color="#FFFFFF"
-                        cx={
-                          MARKER_RADIUS +
-                          saturation * (pickerWidth - MARKER_RADIUS * 2)
-                        }
-                        cy={
-                          MARKER_RADIUS +
-                          (1 - brightness) * (PICKER_HEIGHT - MARKER_RADIUS * 2)
-                        }
-                        r={MARKER_RADIUS}
-                        strokeWidth={3}
-                        style="stroke"
-                      />
-                      <Circle
-                        color="rgba(0,0,0,0.48)"
-                        cx={
-                          MARKER_RADIUS +
-                          saturation * (pickerWidth - MARKER_RADIUS * 2)
-                        }
-                        cy={
-                          MARKER_RADIUS +
-                          (1 - brightness) * (PICKER_HEIGHT - MARKER_RADIUS * 2)
-                        }
-                        r={MARKER_RADIUS + 2}
-                        strokeWidth={1}
-                        style="stroke"
-                      />
-                    </Canvas>
-                  ) : null}
-                </View>
-              </GestureDetector>
-              <GestureDetector gesture={hueGesture}>
-                <View
-                  accessibilityLabel={`${label} 색조 선택`}
-                  style={styles.huePicker}
-                >
-                  {pickerWidth > 0 ? (
-                    <Canvas pointerEvents="none" style={styles.canvas}>
-                      <Rect
-                        height={PICKER_HEIGHT}
-                        width={HUE_WIDTH}
-                        x={0}
-                        y={0}
-                      >
-                        <LinearGradient
-                          colors={HUE_COLORS}
-                          end={vec(0, PICKER_HEIGHT)}
-                          start={vec(0, 0)}
-                        />
-                      </Rect>
-                      <Circle
-                        color="#FFFFFF"
-                        cx={HUE_WIDTH / 2}
-                        cy={
-                          MARKER_RADIUS +
-                          hue * (PICKER_HEIGHT - MARKER_RADIUS * 2)
-                        }
-                        r={MARKER_RADIUS}
-                        strokeWidth={3}
-                        style="stroke"
-                      />
-                      <Circle
-                        color="rgba(0,0,0,0.42)"
-                        cx={HUE_WIDTH / 2}
-                        cy={
-                          MARKER_RADIUS +
-                          hue * (PICKER_HEIGHT - MARKER_RADIUS * 2)
-                        }
-                        r={MARKER_RADIUS + 2}
-                        strokeWidth={1}
-                        style="stroke"
-                      />
-                    </Canvas>
-                  ) : null}
-                </View>
-              </GestureDetector>
-            </View>
-            <View style={styles.inputRow}>
-              <View style={[styles.preview, { backgroundColor: value }]} />
-              <ColorHexInput key={value} onChange={onChange} value={value} />
-            </View>
+        <GestureHandlerRootView style={styles.modalRoot}>
+          <Pressable onPress={() => setVisible(false)} style={styles.backdrop}>
             <Pressable
-              accessibilityRole="button"
-              onPress={() => setVisible(false)}
-              style={({ pressed }) => [
-                styles.doneButton,
-                pressed && styles.pressed,
-              ]}
+              accessibilityViewIsModal
+              onPress={(event) => event.stopPropagation()}
+              style={styles.card}
             >
-              <AppText variant="label" style={styles.doneLabel}>
-                적용
-              </AppText>
+              <View style={styles.modalHeader}>
+                <AppText variant="heading" style={styles.modalTitle}>
+                  {label}
+                </AppText>
+                <Pressable
+                  accessibilityLabel="컬러 피커 닫기"
+                  accessibilityRole="button"
+                  hitSlop={10}
+                  onPress={() => setVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <AppText style={styles.closeLabel}>×</AppText>
+                </Pressable>
+              </View>
+              <View style={styles.picker}>
+                <GestureDetector gesture={saturationGesture}>
+                  <View
+                    accessibilityLabel={`${label} 채도와 밝기 선택`}
+                    onLayout={handleLayout}
+                    style={styles.saturationPicker}
+                  >
+                    {pickerWidth > 0 ? (
+                      <Canvas pointerEvents="none" style={styles.canvas}>
+                        <Rect
+                          height={PICKER_HEIGHT}
+                          width={pickerWidth}
+                          x={0}
+                          y={0}
+                        >
+                          <LinearGradient
+                            colors={["#FFFFFF", hueColor]}
+                            end={vec(pickerWidth, 0)}
+                            start={vec(0, 0)}
+                          />
+                        </Rect>
+                        <Rect
+                          height={PICKER_HEIGHT}
+                          width={pickerWidth}
+                          x={0}
+                          y={0}
+                        >
+                          <LinearGradient
+                            colors={["rgba(0,0,0,0)", "#000000"]}
+                            end={vec(0, PICKER_HEIGHT)}
+                            start={vec(0, 0)}
+                          />
+                        </Rect>
+                        <Circle
+                          color="#FFFFFF"
+                          cx={
+                            MARKER_RADIUS +
+                            saturation * (pickerWidth - MARKER_RADIUS * 2)
+                          }
+                          cy={
+                            MARKER_RADIUS +
+                            (1 - brightness) *
+                              (PICKER_HEIGHT - MARKER_RADIUS * 2)
+                          }
+                          r={MARKER_RADIUS}
+                          strokeWidth={3}
+                          style="stroke"
+                        />
+                        <Circle
+                          color="rgba(0,0,0,0.48)"
+                          cx={
+                            MARKER_RADIUS +
+                            saturation * (pickerWidth - MARKER_RADIUS * 2)
+                          }
+                          cy={
+                            MARKER_RADIUS +
+                            (1 - brightness) *
+                              (PICKER_HEIGHT - MARKER_RADIUS * 2)
+                          }
+                          r={MARKER_RADIUS + 2}
+                          strokeWidth={1}
+                          style="stroke"
+                        />
+                      </Canvas>
+                    ) : null}
+                  </View>
+                </GestureDetector>
+                <GestureDetector gesture={hueGesture}>
+                  <View
+                    accessibilityLabel={`${label} 색조 선택`}
+                    style={styles.huePicker}
+                  >
+                    {pickerWidth > 0 ? (
+                      <Canvas pointerEvents="none" style={styles.canvas}>
+                        <Rect
+                          height={PICKER_HEIGHT}
+                          width={HUE_WIDTH}
+                          x={0}
+                          y={0}
+                        >
+                          <LinearGradient
+                            colors={HUE_COLORS}
+                            end={vec(0, PICKER_HEIGHT)}
+                            start={vec(0, 0)}
+                          />
+                        </Rect>
+                        <Circle
+                          color="#FFFFFF"
+                          cx={HUE_WIDTH / 2}
+                          cy={
+                            MARKER_RADIUS +
+                            hue * (PICKER_HEIGHT - MARKER_RADIUS * 2)
+                          }
+                          r={MARKER_RADIUS}
+                          strokeWidth={3}
+                          style="stroke"
+                        />
+                        <Circle
+                          color="rgba(0,0,0,0.42)"
+                          cx={HUE_WIDTH / 2}
+                          cy={
+                            MARKER_RADIUS +
+                            hue * (PICKER_HEIGHT - MARKER_RADIUS * 2)
+                          }
+                          r={MARKER_RADIUS + 2}
+                          strokeWidth={1}
+                          style="stroke"
+                        />
+                      </Canvas>
+                    ) : null}
+                  </View>
+                </GestureDetector>
+              </View>
+              <View style={styles.inputRow}>
+                <View style={[styles.preview, { backgroundColor: value }]} />
+                <ColorHexInput key={value} onChange={onChange} value={value} />
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setVisible(false)}
+                style={({ pressed }) => [
+                  styles.doneButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <AppText variant="label" style={styles.doneLabel}>
+                  적용
+                </AppText>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );
